@@ -1,0 +1,92 @@
+Logging and Monitoring
+--------------
+alias gp='kubectl get pods'
+alias gn='kubectl get nodes'
+alias gs='kubectl get services'
+alias grs='kubectl get replicasets'
+alias gd='kubectl get deployments'
+alias gns='kubectl get namespaces'
+alias delp='kubectl delete pod'
+alias deld='kubectl delete deployments'
+alias descp='kubectl describe pod'
+alias descn='kubectl describe node'
+alias descd='kubectl describe deployment'
+alias descrs='kubectl describe replicasets'
+alias ga='kubectl get all'
+
+**************************************************************************
+******* Monitor Cluster Components ********************************************
+**************************************************************************
+--------------------------------------------------------------------------------
+1. We have deployed a few PODs running workloads. Inspect them.
+Wait for the pods to be ready before proceeding to the next question.
+
+kubectl get pods
+NAME       READY   STATUS    RESTARTS   AGE
+elephant   1/1     Running   0          42s
+lion       1/1     Running   0          42s
+rabbit     1/1     Running   0          42s
+
+2. Let us deploy the Metrics Server to enable monitoring of the PODs and Nodes in the cluster.
+
+3. Deploy the Metrics Server in your Kubernetes cluster by applying the latest release components.yaml manifest using the following command: Run the 
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+4. It takes a few minutes for the metrics server to start gathering data.
+Run the 
+kubectl top node 
+command and wait for a valid output.
+controlplane ~ ➜  kubectl top node 
+NAME           CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%   
+controlplane   186m         1%     876Mi           1%        
+node01         28m          0%     149Mi           0% 
+
+5. Identify the node that consumes the most CPU.
+   kubectl top node -->  controlplane
+
+6. Identify the node that consumes the most Memory(bytes).
+   kubectl top node -->  controlplane
+
+7. Identify the POD that consumes the most Memory(bytes) in default namespace.
+controlplane ~ ✖ kubectl top pods
+NAME       CPU(cores)   MEMORY(bytes)   
+elephant   14m          30Mi            
+lion       1m           16Mi            
+rabbit     98m          250Mi   <------
+
+8. Identify the POD that consumes the least CPU(cores) in default namespace.
+controlplane ~ ✖ kubectl top pods
+NAME       CPU(cores)   MEMORY(bytes)   
+elephant   14m          30Mi            
+lion       1m           16Mi             <------
+rabbit     98m          250Mi  
+
+
+
+
+**************************************************************************
+******* Monitor Cluster Components ********************************************
+**************************************************************************
+1.  We have deployed a POD hosting an application. Inspect it. Wait for it to start.
+gp
+NAME       READY   STATUS    RESTARTS   AGE
+webapp-1   1/1     Running   0          61s
+
+2. A user - USER5 - has expressed concerns accessing the application. Identify the cause of the issue.
+Inspect the logs of the POD
+kubectl logs pods/webapp-1 | more
+[2024-12-27 12:32:03,137] WARNING in event-simulator: USER5 Failed to Login as the account 
+is locked due to MANY FAILED ATTEMPTS. ---> account is locked due to MANY FAILED ATTEMPTS
+
+3.We have deployed a new POD - webapp-2 - hosting an application. Inspect it. Wait for it to start.
+controlplane ~ ➜  gp
+NAME       READY   STATUS    RESTARTS   AGE
+webapp-1   1/1     Running   0          3m57s
+webapp-2   2/2     Running   0          34s
+
+4. A user is reporting issues while trying to purchase an item. Identify the user and the cause of the issue.
+Inspect the logs of the webapp in the POD
+kubectl logs pods/webapp-2 | more
+[2024-12-27 12:35:28,106] WARNING in event-simulator: USER30 Order failed as the item is 
+OUT OF STOCK. ---> item is OUT OF STOCK.
+
