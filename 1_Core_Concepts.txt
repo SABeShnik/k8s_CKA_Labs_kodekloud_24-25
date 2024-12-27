@@ -1,0 +1,214 @@
+kubectl run --image=nginx nginx
+
+kubectl describe pod newpods-68jqt | grep image
+  Normal  Pulling    3m     kubelet            Pulling image "busybox"
+
+kubectl describe pod newpods-jdw52 | grep Node
+
+
+
+apiVersion: v1
+kind: Pod
+metadata: 
+  name: redis
+spec:
+  containers:
+  - name: redis-container
+    image: redis123
+kubectl apply -f RedisPod.yml
+
+
+deployment in version "v1" cannot be handled as a Deployment: no kind "deployment" is registered for version "apps/v1" in scheme "k8s.io/apimachinery@v1.31.0-k3s3/pkg/runtime/scheme.go:100"
+In my case it was 'kind' field 
+kind: deployment
+changed it to...
+kind: Deployment
+
+kubectl get pods --namespace research
+
+
+controlplane ~ ➜  kubectl describe pods --namespace marketing redis-db 
+Name:             redis-db
+Namespace:        marketing
+Priority:         0
+Service Account:  default
+Node:             controlplane/192.168.114.202
+Start Time:       Wed, 25 Dec 2024 10:04:39 +0000
+Labels:           name=redis
+Annotations:      <none>
+Status:           Running
+IP:               10.42.0.15
+IPs:
+  IP:  10.42.0.15
+Containers:
+  redis:
+    Container ID:   containerd://7fd45319607379a68ebeaad25c9b9fca8b6882965d2082e7ba6106c7542e3103
+    Image:          redis:alpine
+    Image ID:       docker.io/library/redis@sha256:c1e88455c85225310bbea54816e9c3f4b5295815e6dbf80c34d40afc6df28275
+    Port:           6379/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Wed, 25 Dec 2024 10:04:43 +0000
+    Ready:          True
+    Restart Count:  0
+    Environment:
+      REDIS_ROOT_PASSWORD:  paswrd
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-d7l4n (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       True 
+  ContainersReady             True 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-d7l4n:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  15m   default-scheduler  Successfully assigned marketing/redis-db to controlplane
+  Normal  Pulling    15m   kubelet            Pulling image "redis:alpine"
+  Normal  Pulled     15m   kubelet            Successfully pulled image "redis:alpine" in 1.927s (1.927s including waiting). Image size: 19463286 bytes.
+  Normal  Created    15m   kubelet            Created container redis
+  Normal  Started    15m   kubelet            Started container redis
+
+-----
+
+controlplane ~ ➜  kubectl --namespace marketing describe service db-service 
+Name:                     db-service
+Namespace:                marketing
+Labels:                   <none>
+Annotations:              <none>
+Selector:                 name=redis
+Type:                     NodePort
+IP Family Policy:         SingleStack
+IP Families:              IPv4
+IP:                       10.43.169.96
+IPs:                      10.43.169.96
+Port:                     <unset>  6379/TCP
+TargetPort:               6379/TCP
+NodePort:                 <unset>  31573/TCP
+Endpoints:                10.42.0.15:6379
+Session Affinity:         None
+External Traffic Policy:  Cluster
+Internal Traffic Policy:  Cluster
+Events:                   <none>
+
+What DNS name should the Blue application use to access the database db-service in the dev namespace?
+You can try it in the web application UI. Use port 6379.
+===> db-service.dev.svc.cluster.local
+
+
+
+
+Create a new service to access the web application using the service-definition-1.yaml file.
+Name: webapp-service
+Type: NodePort
+targetPort: 8080
+port: 8080
+nodePort: 30080
+selector:
+  name: simple-webapp
+VVVVVVVVVVVVVVVVVVVVVVVVV
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service
+  namespace: default
+spec:
+  ports:
+  - nodePort: 30080
+    port: 8080
+    targetPort: 8080
+  selector:
+    name: simple-webapp
+  type: NodePort
+
+
+
+-----********------ -----********------ -----********------ 
+-----********------ IMPERATIVE ----------------
+Deploy a pod named nginx-pod using the nginx:alpine image.
+apiVersion: v1
+kind: Pod
+metadata: 
+  name: nginx-pod
+  labels:
+    tier: ng
+spec:
+  containers:
+  - name: ng-container
+    image: nginx:alpine
+
+----------------------
+Deploy a redis pod using the redis:alpine image with the labels set to tier=db.
+
+apiVersion: v1
+kind: Pod
+metadata: 
+  name: redis
+  labels:
+    tier: db
+spec:
+  containers:
+  - name: redis-container
+    image: redis:alpine
+                     
+
+
+-------------------------------
+
+
+
+Create a service "redis-service" to expose the redis application within the cluster on port 6379.
+Service: redis-service
+Port: 6379
+Type: ClusterIP
+
+
+apiVersion: v1
+kind: Service
+metadata: 
+  name: redis-service
+  labels:
+    tier: db
+spec:
+  ports:
+    - port: 6379
+  type: ClusterIP
+
+
+--------------------------------
+
+Create a deployment named webapp using the image kodekloud/webapp-color with 3 replicas.
+kubectl create deployment webapp --image=kodekloud/webapp-color --replicas=3
+deployment.apps/webapp created
+
+
+----------------------------- 
+
+Create a new pod called custom-nginx using the nginx image and run it on container port 8080.
+kubectl run custom-nginx --image=nginx --port=8080 - container port exposed ===> it works !
+apiVersion: v1       - doesn't work
+kind: Pod            - doesn't work
+metadata:            - doesn't work
+  name: custom-nginx - doesn't work
+  labels:            - doesn't work
+    tier: db         - doesn't work
+spec:                - doesn't work
+  containers:        - doesn't work
+  - name: cus-ng     - doesn't work
+    image: nginx     - doesn't work
+  ports:             - doesn't work
+    - port: 8080     - doesn't work
