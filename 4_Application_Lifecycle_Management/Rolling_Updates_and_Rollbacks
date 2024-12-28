@@ -1,0 +1,117 @@
+Application Lifecycle Management
+--------------
+alias gp='kubectl get pods'
+alias gn='kubectl get nodes'
+alias gs='kubectl get services'
+alias grs='kubectl get replicasets'
+alias gd='kubectl get deployments'
+alias gns='kubectl get namespaces'
+alias delp='kubectl delete pod'
+alias deld='kubectl delete deployments'
+alias descp='kubectl describe pod'
+alias descn='kubectl describe node'
+alias descd='kubectl describe deployment'
+alias descrs='kubectl describe replicasets'
+alias ga='kubectl get all'
+alias gcm="kubectl get configmaps"
+----------------------------------------------
+
+**************************************************************************
+******* Rolling Updates and Rollbacks ********************************************
+**************************************************************************
+https://github.com/BennyTheSen/kubernetes_admin_course/blob/master/Section5/practice_test_rollingupdates_rollbacks/solutions.txt
+--------------------------------------------------------------------------------
+1. We have deployed a simple web application. Inspect the PODs and the Services
+Wait for the application to fully deploy and view the application using the link called Webapp Portal above your terminal.
+controlplane ~ ➜  gp
+NAME                       READY   STATUS    RESTARTS   AGE
+frontend-7b5df69f4-2srms   1/1     Running   0          45s
+frontend-7b5df69f4-2x9dd   1/1     Running   0          45s
+frontend-7b5df69f4-7sclg   1/1     Running   0          45s
+frontend-7b5df69f4-jpfj2   1/1     Running   0          45s
+
+controlplane ~ ➜  gs
+NAME             TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+kubernetes       ClusterIP   10.43.0.1       <none>        443/TCP          4m9s
+webapp-service   NodePort    10.43.187.103   <none>        8080:30080/TCP   50s
+
+2. What is the current color of the web application?
+Access the Webapp Portal. ---> blue
+
+3. Run the script named curl-test.sh to send multiple requests to test the web application. Take a note of the output.
+Execute the script at /root/curl-test.sh.
+
+controlplane ~ ➜  ./curl-test.sh 
+Hello, Application Version: v1 ; Color: blue OK
+Hello, Application Version: v1 ; Color: blue OK
+Hello, Application Version: v1 ; Color: blue OK
+
+4. Inspect the deployment and identify the number of PODs deployed by it
+controlplane ~ ✖ gp
+NAME                       READY   STATUS    RESTARTS   AGE
+frontend-7b5df69f4-2srms   1/1     Running   0          2m20s
+frontend-7b5df69f4-2x9dd   1/1     Running   0          2m20s
+frontend-7b5df69f4-7sclg   1/1     Running   0          2m20s
+frontend-7b5df69f4-jpfj2   1/1     Running   0          2m20s
+
+controlplane ~ ➜  gd
+NAME       READY   UP-TO-DATE   AVAILABLE   AGE
+frontend   4/4     4            4           2m33s ---> 4
+
+5. What container image is used to deploy the applications?
+controlplane ~ ➜  descd frontend | grep image -i
+    Image:         kodekloud/webapp-color:v1 ---> kodekloud/webapp-color:v1
+
+6. Inspect the deployment and identify the current strategy
+controlplane ~ ➜  descd frontend | grep strat -i
+StrategyType:           RollingUpdate  <-----
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+
+7. If you were to upgrade the application now what would happen?
+---> PODs are upgraded few at a time
+
+8. Let us try that. Upgrade the application by setting the image on the deployment to kodekloud/webapp-color:v2
+Do not delete and re-create the deployment. Only set the new image name for the existing deployment.
+
+Deployment Name: frontend
+Deployment Image: kodekloud/webapp-color:v2
+
+kubectl edit deployments frontend
+(kubectl set image deployments/frontend=kodekloud/webapp-color:v2 --all не работает)
+
+9. Run the script curl-test.sh again. Notice the requests now hit both the old and newer versions. However none of them fail.
+Execute the script at /root/curl-test.sh.
+controlplane ~ ➜  bash /root/curl-test.sh
+Hello, Application Version: v2 ; Color: green OK
+
+Hello, Application Version: v2 ; Color: green OK
+
+Hello, Application Version: v2 ; Color: green OK
+
+10. Up to how many PODs can be down for upgrade at a time
+Consider the current strategy settings and number of PODs - 4 ---> 1
+
+11. Change the deployment strategy to Recreate
+Delete and re-create the deployment if necessary. Only update the strategy type for the existing deployment.
+
+Deployment Name: frontend
+Deployment Image: kodekloud/webapp-color:v2
+Strategy: Recreate
+
+Change  
+strategy: Rolling update
+  max ...: 25
+  max surge: 25
+    type: Rolling update
+on
+ strategy:
+    type: Recreate
+
+12. Upgrade the application by setting the image on the deployment to kodekloud/webapp-color:v3
+Do not delete and re-create the deployment. Only set the new image name for the existing deployment.
+Deployment Name: frontend
+Deployment Image: kodekloud/webapp-color:v3
+kubectl edit deployments frontend
+
+13. Run the script curl-test.sh again. Notice the failures. Wait for the new application to be ready. Notice that the requests now do not hit both the versions
+    ./curl-test.sh
