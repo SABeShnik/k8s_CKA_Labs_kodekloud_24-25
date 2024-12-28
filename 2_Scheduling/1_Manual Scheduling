@@ -1,0 +1,39 @@
+******* MANUAL Sch ********************************************
+****************************************************************
+--------------------------------------------------
+A pod definition file nginx.yaml is given. Create a pod using the file.
+kubectl create -f nginx.yaml
+--------------------------------------------------
+What is the status of the created POD?
+Pending
+--------------------------------------------------
+Why is the POD in a pending state?
+kubectl describe pods nginx
+kubectl describe nodes node01 | grep sched
+Unschedulable:      false ---> No Scheduler present
+kubectl get pods --namespace kube-system --> no scheduler
+https://github.com/BennyTheSen/kubernetes_admin_course/blob/master/Section3/practice_test_manual_scheduling/solutions.txt
+--------------------------------------------------
+Manually schedule the pod on node01.
+Delete and recreate the POD if necessary.
+	vi nginx.yaml
+	add "nodeName: node01" under spec:
+Need this:
+controlplane ~ ➜  cat nginx.yaml 
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+  -  image: nginx
+     name: nginx
+  nodeName: node01
+kubectl delete pod nginx && kubectl create -f nginx.yaml
+--- or ---
+kdp nginx && kubectl create -f nginx.yaml && sleep 4 && kgp
+--------------------------------------------------
+Now schedule the same pod on the controlplane node.
+Delete and recreate the POD if necessary.
+The ssame actions - only change on " controlplane "
