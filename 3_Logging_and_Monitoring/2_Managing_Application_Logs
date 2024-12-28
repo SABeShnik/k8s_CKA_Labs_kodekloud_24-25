@@ -1,0 +1,28 @@
+**************************************************************************
+******* Managing Application Logs ********************************************
+**************************************************************************
+
+
+
+1.  We have deployed a POD hosting an application. Inspect it. Wait for it to start.
+gp
+NAME       READY   STATUS    RESTARTS   AGE
+webapp-1   1/1     Running   0          61s
+
+2. A user - USER5 - has expressed concerns accessing the application. Identify the cause of the issue.
+Inspect the logs of the POD
+kubectl logs pods/webapp-1 | more
+[2024-12-27 12:32:03,137] WARNING in event-simulator: USER5 Failed to Login as the account 
+is locked due to MANY FAILED ATTEMPTS. ---> account is locked due to MANY FAILED ATTEMPTS
+
+3.We have deployed a new POD - webapp-2 - hosting an application. Inspect it. Wait for it to start.
+controlplane ~ ➜  gp
+NAME       READY   STATUS    RESTARTS   AGE
+webapp-1   1/1     Running   0          3m57s
+webapp-2   2/2     Running   0          34s
+
+4. A user is reporting issues while trying to purchase an item. Identify the user and the cause of the issue.
+Inspect the logs of the webapp in the POD
+kubectl logs pods/webapp-2 | more
+[2024-12-27 12:35:28,106] WARNING in event-simulator: USER30 Order failed as the item is 
+OUT OF STOCK. ---> item is OUT OF STOCK.
