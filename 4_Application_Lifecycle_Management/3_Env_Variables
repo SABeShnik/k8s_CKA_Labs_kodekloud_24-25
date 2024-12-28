@@ -1,0 +1,381 @@
+**************************************************************************
+******* Env Variables ********************************************
+**************************************************************************
+https://github.com/BennyTheSen/kubernetes_admin_course/tree/master/Section5/practice_test_env_variables
+------------------------------------------------------------------------------------------------------------------------------
+1. How many PODs exist on the system?
+in the current(default) namespace ---> 1
+
+2. What is the environment variable name set on the container in the pod?
+descp webapp-color --- > APP_COLOR
+
+3. What is the value set on the environment variable APP_COLOR on the container in the pod? ---> pink
+
+4. View the web application UI by clicking on the Webapp Color Tab above your terminal.
+This is located on the right side. ---> click on the "webapp color" button
+
+5. Update the environment variable on the POD to display a green background.
+Note: Delete and recreate the POD. Only make the necessary changes. Do not modify the name of the Pod.
+
+Pod Name: webapp-color
+Label Name: webapp-color
+Env: APP_COLOR=green
+--------------------------------
+Our yml by -oyaml:
+
+controlplane ~ ➜  gp
+NAME           READY   STATUS    RESTARTS   AGE
+webapp-color   1/1     Running   0          2m9s
+
+controlplane ~ ➜  kubectl get pod webapp-color -oyaml > webappcolor_pod.yml
+
+cat webappcolor.yml 
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2024-12-28T10:45:45Z"
+  labels:
+    name: webapp-color
+  name: webapp-color
+  namespace: default
+  resourceVersion: "754"
+  uid: f2f54a3f-13e7-4e43-ba36-48f68698bdef
+spec:
+  containers:
+  - env:
+    - name: APP_COLOR
+      value: green
+    image: kodekloud/webapp-color
+    imagePullPolicy: Always
+    name: webapp-color
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-wbcj8
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: controlplane
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - name: kube-api-access-wbcj8
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-28T10:45:46Z"
+    status: "True"
+    type: PodReadyToStartContainers
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-28T10:45:45Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-28T10:46:02Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-28T10:46:02Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-28T10:45:45Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: containerd://fb03274d1a93ed6357578e40b8b62e2cc4712ff4f83a9b4ed888fd9c91287bce
+    image: docker.io/kodekloud/webapp-color:latest
+    imageID: docker.io/kodekloud/webapp-color@sha256:99c3821ea49b89c7a22d3eebab5c2e1ec651452e7675af243485034a72eb1423
+    lastState: {}
+    name: webapp-color
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2024-12-28T10:46:01Z"
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-wbcj8
+      readOnly: true
+      recursiveReadOnly: Disabled
+  hostIP: 192.168.42.158
+  hostIPs:
+  - ip: 192.168.42.158
+  phase: Running
+  podIP: 10.42.0.9
+  podIPs:
+  - ip: 10.42.0.9
+  qosClass: BestEffort
+  startTime: "2024-12-28T10:45:45Z"
+
+
+kubectl delete pod webapp-color 
+pod "webapp-color" deleted
+Modify color -->  controlplane ~ ➜  vi webappcolor_pod.yml 
+controlplane ~ ➜  kubectl create -f webappcolor_pod.yml
+pod/webapp-color created
+----------------------------------
+
+6. View the changes to the web application UI by clicking on the Webapp Color Tab above your terminal.
+If you already have it open, simply refresh the browser. (now green in updated web ui)
+
+7. How many ConfigMaps exists in the default namespace?
+kubectl get configmaps ---> 2 
+
+8. Identify the database host from the config map db-config.
+kubectl describe configmaps db-config
+DB_HOST:
+----
+SQL01.example.com
+
+9. Create a new ConfigMap for the webapp-color POD. Use the spec given below.
+ConfigMap Name: webapp-config-map
+Data: APP_COLOR=darkblue
+Data: APP_OTHER=disregard
+
+kubectl get configmaps db-config -oyaml > configMap.yml
+----------------------
+vi configMap.yml
+apiVersion: v1
+data:
+  DB_HOST: SQL01.example.com
+  DB_NAME: SQL01
+  DB_PORT: "3306"
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2024-12-28T10:57:28Z"
+  name: db-config
+  namespace: default
+  resourceVersion: "980"
+  uid: 627ccd04-cf6a-4fd6-9273-d3620a03813e
+
+( Need add - "APP_COLOR: darkblue" and "APP_OTHER: disregard" )
+change to 
+apiVersion: v1
+data:
+  DB_HOST: SQL01.example.com
+  DB_NAME: SQL01
+  DB_PORT: "3306"
+  APP_COLOR: darkblue
+  APP_OTHER: disregard
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2024-12-28T10:57:28Z"
+  name: webapp-config-map
+  namespace: default
+  resourceVersion: "980"
+  uid: 627ccd04-cf6a-4fd6-9273-d3620a03813e
+
+# controlplane ~ ✖ kubectl delete configmaps db-config
+# configmap "db-config" deleted
+
+controlplane ~ ➜  kubectl create -f configMap.yml
+configmap/webapp-config-map created
+--------------------------------------------------------------
+
+
+
+10. Update the environment variable on the POD to use only the APP_COLOR key from the newly created ConfigMap.
+Note: Delete and recreate the POD. Only make the necessary changes. Do not modify the name of the Pod.
+
+Pod Name: webapp-color
+ConfigMap Name: webapp-config-map
+
+kubectl delete pod webapp-color
+
+# Скопировать БЛЯДСКИЙ старый configmap в новый с имененм webapp-config-map
+# В webappcolor_pod.yml поменять настройки в части на:
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dapi-test-pod
+spec:
+  containers:
+    - name: test-container
+      image: registry.k8s.io/busybox
+      command: [ "/bin/sh", "-c", "env" ]
+      env:
+        # Define the environment variable
+        - name: SPECIAL_LEVEL_KEY
+          valueFrom:
+            configMapKeyRef:
+              # The ConfigMap containing the value you want to assign to SPECIAL_LEVEL_KEY
+              name: special-config
+              # Specify the key associated with the value
+              key: special.how
+
+Need BLOCK:
+spec:
+  containers:
+  - env:
+    - name: APP_COLOR
+      valueFrom: 
+        configMapKeyRef:
+          name: webapp-config-map
+          key: APP_COLOR
+    image: kodekloud/webapp-color
+
+
+AND MAYBE OK THIS:
+spec:
+  containers:
+    envFrom: 
+    - configMapRef: 
+        name: webapp-config-map
+--------
+-------------------------
+
+Full resul fileapiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    name: webapp-color
+  name: webapp-color
+  namespace: default
+  resourceVersion: "731"
+  uid: 88c6c15b-3432-4b7a-9c75-08f1d8b6b8db
+spec:
+  containers:
+  - env:
+    - name: APP_COLOR
+      valueFrom:
+        configMapKeyRef:
+          name: webapp-config-map
+          key: APP_COLOR
+    image: kodekloud/webapp-color
+    imagePullPolicy: Always
+    name: webapp-color
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-qzc67
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: controlplane
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - name: kube-api-access-qzc67
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-28T16:47:55Z"
+    status: "True"
+    type: PodReadyToStartContainers
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-28T16:47:51Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-28T16:47:55Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-28T16:47:55Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-28T16:47:51Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: containerd://a201f14d0cd8e538f8b8c2575e34a1e5b18def5cf16dc03be1efcd364f12f7db
+    image: docker.io/kodekloud/webapp-color:latest
+    imageID: docker.io/kodekloud/webapp-color@sha256:99c3821ea49b89c7a22d3eebab5c2e1ec651452e7675af243485034a72eb1423
+    lastState: {}
+    name: webapp-color
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2024-12-28T16:47:54Z"
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-qzc67
+      readOnly: true
+      recursiveReadOnly: Disabled
+  hostIP: 192.168.251.243
+  hostIPs:
+  - ip: 192.168.251.243
+  phase: Running
+  podIP: 10.42.0.9
+  podIPs:
+  - ip: 10.42.0.9
+  qosClass: BestEffort
+  startTime: "2024-12-28T16:47:51Z"
+  
+  
+  
+11. View the changes to the web application UI by clicking on the Webapp Color Tab above your terminal.
+If you already have it open, simply refresh the browser.
