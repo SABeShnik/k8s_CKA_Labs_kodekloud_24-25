@@ -1,0 +1,18 @@
+kubectl run --image=nginx nginx
+
+kubectl describe pod newpods-68jqt | grep image
+  Normal  Pulling    3m     kubelet            Pulling image "busybox"
+
+kubectl describe pod newpods-jdw52 | grep Node
+
+
+
+apiVersion: v1
+kind: Pod
+metadata: 
+  name: redis
+spec:
+  containers:
+  - name: redis-container
+    image: redis123
+kubectl apply -f RedisPod.yml
