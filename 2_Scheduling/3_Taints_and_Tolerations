@@ -1,0 +1,82 @@
+***************************************************************************
+******* Taints and Tolerations ********************************************
+***************************************************************************
+Тейнты (Taints and Tolerations) — это метки, которые указывают, где нельзя размещать поды.
+-----------------------------------------------------------------------
+How many Nodes exist on the system?
+   kubectl get nodes --> 2
+-----------------------------------------------------------------------
+Do any taints exist on node01 node?
+descn node01 | grep -i taints
+-----------------------------------------------------------------------
+Create a taint on node01 with key of 'spray', value of 'mortein' and effect of 'NoSchedule'
+   kubectl taint nodes node01 spray=mortein:NoSchedule
+controlplane ~ ➜  descn node01 | grep -i taints
+Taints:             spray=mortein:NoSchedule
+--------------------------------------------------------------------------------------------
+Create a new pod with the nginx image and pod name as mosquito.
+vi mosq.yml
+
+apiVersion: v1
+kind: Pod
+metadata: 
+  name: mosquito
+spec:
+  containers:
+  - name: ng-mosq
+    image: nginx
+--- or 
+kubectl run --generator=run-pod/v1 mosquito --image=nginx
+
+kubectl apply -f mosq.yml
+--------------------------------------------------------------------------------------------
+What is the state of the POD? -> Pending
+--------------------------------------------------------------------------------------------
+Why do you think the pod is in a pending state?
+   cannot tolerate taint spray:mortein
+--------------------------------------------------------------------------------------------
+Create another pod named bee with the nginx image, which has a toleration set to the taint mortein.
+kubectl run --generator=run-pod/v1 bee --image=nginx --dry-run -o yaml > bee-definition.yaml
+   see file in directory
+   kubectl create -f bee-definition.yaml
+---- or
+vi bee.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  name: bee
+  labels:
+    run: bee
+spec:
+  containers:
+  - image: nginx
+    imagePullPolicy: IfNotPresent
+    name: bee
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+  tolerations:
+    - key: "spray"
+      operator: "Equal"
+      value: "mortein"
+      effect: "NoSchedule"
+status: {}
+
+kubectl create -f bee.yaml
+--------------------------------------------------------------------------------------------
+Do you see any taints on controlplane node?
+Yes - NoSchedule
+--------------------------------------------------------------------------------------------
+Remove the taint on controlplane, which currently has the taint effect of NoSchedule.
+	descn controlplane | grep -i taints
+	Taints:             node-role.kubernetes.io/control-plane:NoSchedule
+	kubectl taint nodes controlplane node-role.kubernetes.io/control-plane:NoSchedule-
+удалили тайнт и mosquito = Running стал
+--------------------------------------------------------------------------------------------
+What is the state of the pod 'mosquito' now?
+   kubectl get pods --> Running
+--------------------------------------------------------------------------------------------
+Which node is the POD 'mosquito' on now?
+   kubectl get pods -o wide --> master
