@@ -1,0 +1,198 @@
+***************************************************************************
+******* 5_Resource_Limits *************************************************
+***************************************************************************
+--------------------------------------------------------------------------------------------
+
+1. A pod called rabbit is deployed. Identify the CPU requirements set on the Pod
+in the current(default) namespace  
+descp rabbit ---> 500m
+--------------------------------------------------------------------------------------------
+2. Delete the rabbit Pod. ---> delp rabbit
+--------------------------------------------------------------------------------------------
+3. Another pod called elephant has been deployed in the default namespace. It fails to get to a running state. Inspect this pod and identify the Reason why it is not running. ---> OOMkilled
+
+descp elephant | grep -i reason
+      Reason:       CrashLoopBackOff
+      Reason:       OOMKilled ---> OOMkilled
+Back-off restarting failed container mem-stress in pod elephant_default
+
+The status OOMKilled indicates that it is failing because the pod ran out of memory. Identify the memory limit set on the POD.
+--------------------------------------------------------------------------------------------
+4. ok button
+--------------------------------------------------------------------------------------------
+5. The elephant pod runs a process that consumes 15Mi of memory. Increase the limit of the elephant pod to 20Mi.
+Delete and recreate the pod if required. Do not modify anything other than the required fields.
+
+YML
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2024-12-26T14:19:20Z"
+  name: elephant
+  namespace: default
+  resourceVersion: "959"
+  uid: ecc1252c-27f9-4927-9490-c5c9f96cc181
+spec:
+  containers:
+  - args:
+    - --vm
+    - "1"
+    - --vm-bytes
+    - 15M
+    - --vm-hang
+    - "1"
+    command:
+    - stress
+    image: polinux/stress
+    imagePullPolicy: Always
+    name: mem-stress
+    resources:
+      limits:
+        memory: 10Mi
+
+
+kubectl get po <pod name> -oyaml > test.yaml
+
+controlplane ~ ✖ gp elephant -oyaml > el.yml
+
+controlplane ~ ➜  cat el.yml 
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2024-12-26T14:19:20Z"
+  name: elephant
+  namespace: default
+  resourceVersion: "1051"
+  uid: ecc1252c-27f9-4927-9490-c5c9f96cc181
+spec:
+  containers:
+  - args:
+    - --vm
+    - "1"
+    - --vm-bytes
+    - 15M
+    - --vm-hang
+    - "1"
+    command:
+    - stress
+    image: polinux/stress
+    imagePullPolicy: Always
+    name: mem-stress
+    resources:
+      limits:
+        memory: 10Mi
+      requests:
+        memory: 5Mi
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-llxpk
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: controlplane
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - name: kube-api-access-llxpk
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-26T14:19:23Z"
+    status: "True"
+    type: PodReadyToStartContainers
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-26T14:19:20Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-26T14:25:11Z"
+    message: 'containers with unready status: [mem-stress]'
+    reason: ContainersNotReady
+    status: "False"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-26T14:25:11Z"
+    message: 'containers with unready status: [mem-stress]'
+    reason: ContainersNotReady
+    status: "False"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-26T14:19:20Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: containerd://4005ea73027848e99e8b372f6a54a24fb6485f3ea1c006295f6c1befd7910a3f
+    image: docker.io/polinux/stress:latest
+    imageID: docker.io/polinux/stress@sha256:b6144f84f9c15dac80deb48d3a646b55c7043ab1d83ea0a697c09097aaad21aa
+    lastState:
+      terminated:
+        containerID: containerd://4005ea73027848e99e8b372f6a54a24fb6485f3ea1c006295f6c1befd7910a3f
+        exitCode: 1
+        finishedAt: "2024-12-26T14:30:12Z"
+        reason: OOMKilled
+        startedAt: "2024-12-26T14:30:12Z"
+    name: mem-stress
+    ready: false
+    restartCount: 7
+    started: false
+    state:
+      waiting:
+        message: back-off 5m0s restarting failed container=mem-stress pod=elephant_default(ecc1252c-27f9-4927-9490-c5c9f96cc181)
+        reason: CrashLoopBackOff
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-llxpk
+      readOnly: true
+      recursiveReadOnly: Disabled
+  hostIP: 192.168.20.139
+  hostIPs:
+  - ip: 192.168.20.139
+  phase: Running
+  podIP: 10.42.0.10
+  podIPs:
+  - ip: 10.42.0.10
+  qosClass: Burstable
+  startTime: "2024-12-26T14:19:20Z"
+
+delp elephant
+edit file ---> vi el.yml
+kubectl create -f el.yml
+
+--------------------------------------------------------------------------------------------
+6. ok
+--------------------------------------------------------------------------------------------
+7. delete ---> delp elephant
