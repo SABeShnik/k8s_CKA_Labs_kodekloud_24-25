@@ -1,0 +1,164 @@
+***************************************************************************
+******* 8_Multiple_Schedulers *********************************************
+***************************************************************************
+--------------------------------------------------------------------------------------------
+
+1. What is the name of the POD that deploys the default kubernetes scheduler in this environment?
+gp -A
+NAMESPACE      NAME                                   READY   STATUS    RESTARTS   AGE
+kube-flannel   kube-flannel-ds-96jfz                  1/1     Running   0          3m14s
+kube-system    coredns-77d6fd4654-9s4j7               1/1     Running   0          3m13s
+kube-system    coredns-77d6fd4654-vc6b5               1/1     Running   0          3m13s
+kube-system    etcd-controlplane                      1/1     Running   0          3m18s
+kube-system    kube-apiserver-controlplane            1/1     Running   0          3m18s
+kube-system    kube-controller-manager-controlplane   1/1     Running   0          3m18s
+kube-system    kube-proxy-46cr5                       1/1     Running   0          3m14s
+kube-system    kube-scheduler-controlplane            1/1     Running   0          3m18s
+--> kube-scheduler-controlplane
+
+
+2. What is the image used to deploy the kubernetes scheduler?
+descp -n kube-system kube-scheduler-controlplane | grep -i image
+    Image:         registry.k8s.io/kube-scheduler:v1.31.0
+
+3. We have already created the ServiceAccount and ClusterRoleBinding that our custom scheduler will make use of.
+Checkout the following Kubernetes objects:
+ServiceAccount: my-scheduler (kube-system namespace)
+ClusterRoleBinding: my-scheduler-as-kube-scheduler
+ClusterRoleBinding: my-scheduler-as-volume-scheduler
+Run the command: kubectl get serviceaccount -n kube-system and kubectl get clusterrolebinding
+Note: - Don't worry if you are not familiar with these resources. We will cover it later on.
+
+4. Let's create a configmap that the new scheduler will employ using the concept of ConfigMap as a volume.
+We have already given a configMap definition file called my-scheduler-configmap.yaml at /root/ path that will create a configmap with name my-scheduler-config using the content of file /root/my-scheduler-config.yaml.
+kubectl create -f /root/my-scheduler-configmap.yaml
+
+controlplane ~ ➜  ll /root/my*
+-rw-r--r-- 1 root root 336 Dec 27 11:46 /root/my-scheduler-configmap.yaml
+-rw-r--r-- 1 root root 155 Dec  3 11:24 /root/my-scheduler-config.yaml
+-rw-r--r-- 1 root root 893 Dec  3 11:24 /root/my-scheduler.yaml
+
+--------- controlplane ~ ➜  cat /root/my-scheduler.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: my-scheduler
+  name: my-scheduler
+  namespace: kube-system
+spec:
+  serviceAccountName: my-scheduler
+  containers:
+  - command:
+    - /usr/local/bin/kube-scheduler
+    - --config=/etc/kubernetes/my-scheduler/my-scheduler-config.yaml
+    image: <use-correct-image>
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 10259
+        scheme: HTTPS
+      initialDelaySeconds: 15
+    name: kube-second-scheduler
+    readinessProbe:
+      httpGet:
+        path: /healthz
+        port: 10259
+        scheme: HTTPS
+    resources:
+      requests:
+        cpu: '0.1'
+    securityContext:
+      privileged: false
+    volumeMounts:
+      - name: config-volume
+        mountPath: /etc/kubernetes/my-scheduler
+  hostNetwork: false
+  hostPID: false
+  volumes:
+    - name: config-volume
+      configMap:
+        name: my-scheduler-config  
+
+
+------------ controlplane ~ ➜  cat /root/my-scheduler-config.yaml 
+apiVersion: kubescheduler.config.k8s.io/v1
+kind: KubeSchedulerConfiguration
+profiles:
+  - schedulerName: my-scheduler
+leaderElection:
+  leaderElect: false
+
+
+----------- controlplane ~ ➜  cat /root/my-scheduler-configmap.yaml 
+apiVersion: v1
+data:
+  my-scheduler-config.yaml: |
+    apiVersion: kubescheduler.config.k8s.io/v1
+    kind: KubeSchedulerConfiguration
+    profiles:
+      - schedulerName: my-scheduler
+    leaderElection:
+      leaderElect: false
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: my-scheduler-config
+  namespace: kube-system
+
+
+5. Deploy an additional scheduler to the cluster following the given specification.
+Use the manifest file provided at /root/my-scheduler.yaml. Use the same image as used by the default kubernetes scheduler.
+
+Name: my-scheduler
+Status: Running
+Correct image used?
+
+controlplane ~ ➜  kubectl create -f /root/my-scheduler.yaml 
+pod/my-scheduler created
+
+Создается но не работает т.к. в конфиге не указан образ, директива есть но не указан образ.
+controlplane ~ ➜  kubectl get pod -A | grep -i sche
+kube-system    kube-scheduler-controlplane            1/1     Running            0          18m
+kube-system    my-scheduler                           0/1     InvalidImageName   0          3m31s
+
+
+Получаем из работающего планировщика образ:
+controlplane ~ ➜  kubectl get pod -n kube-system kube-scheduler-controlplane -oyaml | grep -i image
+    image: registry.k8s.io/kube-scheduler:v1.31.0
+Опять vi /root/my-scheduler.yaml и втыкаем в image registry.k8s.io/kube-scheduler:v1.31.0
+
+Далее kubectl apply -f /root/my-scheduler.yaml и controlplane ~ ➜  kubectl get pod -A | grep -i my-sche
+kube-system    my-scheduler     1/1     Running   0          5m39s
+
+
+6. A POD definition file is given. Use it to create a POD with the new custom scheduler.
+File is located at /root/nginx-pod.yaml
+
+Uses custom scheduler
+Status: Running
+
+cat /root/nginx-pod.yaml
+apiVersion: v1 
+kind: Pod 
+metadata:
+  name: nginx 
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+
+vi /root/nginx-pod.yaml --> add schedulerName: my-scheduler under spec
+   kubectl create -f /root/nginx-pod.yaml
+
+---> 
+apiVersion: v1
+kind: Pod 
+metadata:
+  name: nginx
+spec:
+  schedulerName: my-scheduler
+  containers:
+    #  - image: nginx
+  - image: nginx
+    name: nginx
