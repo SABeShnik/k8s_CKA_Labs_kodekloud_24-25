@@ -1,0 +1,27 @@
+ 1  kubectl get pod
+    2  kubectl get replicasets.apps 
+    3  kubectl get replicasets.apps 
+    6  kubectl describe replicasets.apps new-replica-set
+    7  kubectl get replicasets.apps 
+    8  kubectl g pods
+    9  kubectl get pods
+   10  kubectl delete pod new-replica-set-6m2sr
+   11  kubectl get pods
+   12  ls /root/
+   13  kubectl create -f /root/replicaset-definition-1.yaml 
+   14  vi /root/replicaset-definition-1.yaml 
+   20  kubectl create -f /root/replicaset-definition-2.yaml 
+   21  vi /root/replicaset-definition-2.yaml 
+   23  kubectl create -f /root/replicaset-definition-2.yaml 
+   24  kubectl delete replicasets.apps replicaset-1 replicaset-2 
+   25  kubectl get replicasets.apps 
+   26  ks /root/
+   27  ls /root/
+   28  cat /root/sample.yaml 
+   29  cat /root/replicaset-definition-
+   30  cat /root/replicaset-definition-1.yaml 
+   31  kubectl edit replicasets.app new-replica-set 
+   38  kubectl delete --all po
+   42  kubectl scale replicaset new-replica-set --replicas=5
+   43  kubectl get  pod
+   45  kubectl scale replicaset new-replica-set --replicas=2
