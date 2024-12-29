@@ -296,6 +296,6 @@ deployment.apps/critical-deployment-240616   2/2     2            2           58
 
 NAME                                                  DESIRED   CURRENT   READY   AGE
 replicaset.apps/critical-deployment-240616-f7b796cd   2         2         2       58m
-
-student-node ~ ➜  
+Detaied explanation:
+https://github.com/kodekloudhub/certified-kubernetes-administrator-course/blob/master/docs/06-Cluster-Maintenance/10-Practice-Test-Backup-and-Restore-Methods-2.md
 ------------------------------------------------------------------------------------------
