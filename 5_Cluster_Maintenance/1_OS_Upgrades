@@ -1,0 +1,256 @@
+1_OS_Upgrades
+
+1. Let us explore the environment first. How many nodes do you see in the cluster?
+Including the controlplane and worker nodes.
+controlplane ~ ➜  kubectl get nodes --->  2
+----------------------------------------------------------------------------------
+
+2. How many applications do you see hosted on the cluster?
+Check the number of deployments in the default namespace
+controlplane ~ ➜  kubectl get deployments.apps -n default 
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+blue   3/3     3            3           44s ---> 1
+----------------------------------------------------------------------------------
+
+3. Which nodes are the applications hosted on?
+controlplane ~ ➜  kubectl get pods -o wide
+NAME                    READY   STATUS    RESTARTS   AGE    IP           NODE           NOMINATED NODE   READINESS GATES
+blue-56dd475db5-dvzkw   1/1     Running   0          2m2s   172.17.1.2   node01         <none>           <none>
+blue-56dd475db5-slqfq   1/1     Running   0          2m2s   172.17.0.4   controlplane   <none>           <none>
+blue-56dd475db5-wvhw6   1/1     Running   0          2m2s   172.17.1.3   node01         <none>           <none>
+---> controlplane + node01
+----------------------------------------------------------------------------------
+
+4. We need to take node01 out for maintenance. Empty the node of all applications and mark it unschedulable.
+Node node01 Unschedulable
+Pods evicted from node01
+
+controlplane ~ ➜  kubectl drain node01 --ignore-daemonsets
+node/node01 cordoned
+Warning: ignoring DaemonSet-managed Pods: kube-flannel/kube-flannel-ds-v745s, kube-system/kube-proxy-bfb7z
+evicting pod default/blue-56dd475db5-wvhw6
+evicting pod default/blue-56dd475db5-dvzkw
+pod/blue-56dd475db5-dvzkw evicted
+pod/blue-56dd475db5-wvhw6 evicted
+node/node01 drained
+
+controlplane ~ ➜  kubectl get pods -o wide
+NAME                    READY   STATUS    RESTARTS   AGE     IP           NODE           NOMINATED NODE   READINESS GATES
+blue-56dd475db5-qlks9   1/1     Running   0          8s      172.17.0.6   controlplane   <none>           <none>
+blue-56dd475db5-s865v   1/1     Running   0          8s      172.17.0.5   controlplane   <none>           <none>
+blue-56dd475db5-slqfq   1/1     Running   0          3m54s   172.17.0.4   controlplane   <none>           <none>
+----------------------------------------------------------------------------------
+
+5. What nodes are the apps on now? ---> controlplane
+----------------------------------------------------------------------------------
+
+6. The maintenance tasks have been completed. Configure the node node01 to be schedulable again.
+controlplane ~ ➜ kubectl uncordon node01
+node/node01 uncordoned
+----------------------------------------------------------------------------------
+
+7. How many pods are scheduled on node01 now in the default namespace?
+kubectl get pods -o wide ---> 0
+----------------------------------------------------------------------------------
+
+8. Why are there no pods on node01? ---> Only when new pods are created they will be scheduled
+----------------------------------------------------------------------------------
+
+9. Why are the pods placed on the controlplane node? Check the controlplane node details.
+controlplane ~ ➜  kubectl describe nodes controlplane | grep Taints:
+Taints:             <none>    ---> controlplane node does not have any taints
+----------------------------------------------------------------------------------
+
+10. Time travelling to the next maintenance window… ---> ok button
+----------------------------------------------------------------------------------
+
+11. We need to carry out a maintenance activity on node01 again. 
+Try draining the node again using the same command as before: kubectl drain node01 --ignore-daemonsets
+Did that work?
+controlplane ~ ➜  kubectl drain node01 --ignore-daemonsets
+node/node01 cordoned
+error: unable to drain node "node01" due to error: cannot delete cannot delete Pods that declare no controller (use --force to override): default/hr-app, continuing command...
+There are pending nodes to be drained:
+ node01
+cannot delete cannot delete Pods that declare no controller (use --force to override): default/hr-app
+---> NO
+----------------------------------------------------------------------------------
+
+12. Why did the drain command fail on node01? It worked the first time!
+controlplane ~ ➜  kubectl get pods -o wide
+NAME                    READY   STATUS    RESTARTS   AGE     IP           NODE           NOMINATED NODE   READINESS GATES
+blue-56dd475db5-qlks9   1/1     Running   0          12m     172.17.0.6   controlplane   <none>           <none>
+blue-56dd475db5-s865v   1/1     Running   0          12m     172.17.0.5   controlplane   <none>           <none>
+blue-56dd475db5-slqfq   1/1     Running   0          16m     172.17.0.4   controlplane   <none>           <none>
+hr-app                  1/1     Running   0          4m15s   172.17.1.4   node01         <none>           <none>
+---> there is a pod in node01 which is not part of a replicaset
+----------------------------------------------------------------------------------
+
+13. What is the name of the POD hosted on node01 that is not part of a replicaset?
+---> hr-app
+----------------------------------------------------------------------------------
+
+14. What would happen to hr-app if node01 is drained forcefully?
+Try it and see for yourself.
+controlplane ~ ➜  kubectl drain node01 --ignore-daemonsets --force 
+node/node01 already cordoned
+Warning: deleting Pods that declare no controller: default/hr-app; ignoring DaemonSet-managed Pods: kube-flannel/kube-flannel-ds-v745s, kube-system/kube-proxy-bfb7z
+evicting pod default/hr-app
+pod/hr-app evicted
+node/node01 drained
+
+controlplane ~ ➜  kubectl get pods -o wide
+NAME                    READY   STATUS    RESTARTS   AGE   IP           NODE           NOMINATED NODE   READINESS GATES
+blue-56dd475db5-qlks9   1/1     Running   0          16m   172.17.0.6   controlplane   <none>           <none>
+blue-56dd475db5-s865v   1/1     Running   0          16m   172.17.0.5   controlplane   <none>           <none>
+blue-56dd475db5-slqfq   1/1     Running   0          20m   172.17.0.4   controlplane   <none>           <none>
+
+controlplane ~ ➜  hr-app will be lost forever
+----------------------------------------------------------------------------------
+
+15. Oops! We did not want to do that! hr-app is a critical application that should not be destroyed. 
+We have now reverted back to the previous state and re-deployed hr-app as a deployment. ---> Ok button
+----------------------------------------------------------------------------------
+
+16. hr-app is a critical app and we do not want it to be removed and we do not want to schedule any more pods on node01.
+Mark node01 as unschedulable so that no new pods are scheduled on this node.
+Make sure that hr-app is not affected.
+
+Node01 Unschedulable
+hr-app still running on node01?
+
+controlplane ~ ➜  kubectl get pods -o wide | grep hr
+hr-app-79dcd6fd8f-kwd2b   1/1     Running   0          103s   172.17.1.5   node01         <none>           <none>
+
+controlplane ~ ➜  kubectl describe nodes node01 | grep -i Unschedulable
+Unschedulable:      false
+
+controlplane ~ ➜  kubectl cordon node01
+node/node01 cordoned
+
+controlplane ~ ➜  kubectl describe nodes node01 | grep -i Unschedulable
+                    node.kubernetes.io/unschedulable:NoSchedule
+Unschedulable:      true
+Итого новые поды туда не прилетят и при этом текущий под не удалится
+
+
+
+controlplane ~ ➜  cat hr.yml 
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2024-12-29T09:01:06Z"
+  generateName: hr-app-79dcd6fd8f-
+  labels:
+    app: hr-app
+    pod-template-hash: 79dcd6fd8f
+  name: hr-app-79dcd6fd8f-kwd2b
+  namespace: default
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ReplicaSet
+    name: hr-app-79dcd6fd8f
+    uid: b04002c3-dd32-41a3-be60-875cc488d408
+  resourceVersion: "2775"
+  uid: b32fcdbc-b64a-4a4e-9506-1c46c176dc2d
+spec:
+  containers:
+  - image: kodekloud/webapp-delayed-start
+    imagePullPolicy: Always
+    name: webapp-delayed-start
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-t9b2v
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: node01
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - name: kube-api-access-t9b2v
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-29T09:01:07Z"
+    status: "True"
+    type: PodReadyToStartContainers
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-29T09:01:06Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-29T09:01:07Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-29T09:01:07Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-29T09:01:06Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: containerd://8e21523eb091638aba5cfeb7313c749d1d462f5b705ce263604d48772572973d
+    image: docker.io/kodekloud/webapp-delayed-start:latest
+    imageID: docker.io/kodekloud/webapp-delayed-start@sha256:666b95c2ef8e00a74fa0ea96def8d9d69104ec5d9b9b0f49d8a76bd4c94ad343
+    lastState: {}
+    name: webapp-delayed-start
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2024-12-29T09:01:07Z"
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-t9b2v
+      readOnly: true
+      recursiveReadOnly: Disabled
+  hostIP: 192.168.63.130
+  hostIPs:
+  - ip: 192.168.63.130
+  phase: Running
+  podIP: 172.17.1.5
+  podIPs:
+  - ip: 172.17.1.5
+  qosClass: BestEffort
+  startTime: "2024-12-29T09:01:06Z"
