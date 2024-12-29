@@ -1,0 +1,104 @@
+3_Backup_and_Restore_Methods
+
+
+1. We have a working Kubernetes cluster with a set of web applications running. Let us first explore the setup.
+How many deployments exist in the cluster in default namespace?
+controlplane ~ ➜  kubectl get deployments.apps 
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+blue   3/3     3            3           41s
+red    2/2     2            2           41s ---> 2
+-------------------------------------------------------------------------------
+
+2. What is the version of ETCD running on the cluster?
+Check the ETCD Pod or Process
+controlplane ~ ✖ kubectl get pods -n kube-system | grep etcd
+etcd-controlplane                      1/1     Running   0          7m27s
+controlplane ~ ➜  kubectl describe pod --namespace=kube-system etcd-controlplane | grep -i etcd:
+  etcd:
+    Image:         registry.k8s.io/etcd:3.5.15-0 ---> 3.5.15
+-------------------------------------------------------------------------------
+
+3. At what address can you reach the ETCD cluster from the controlplane node?
+Check the ETCD Service configuration in the ETCD POD
+controlplane ~ ✖ kubectl describe pod --namespace=kube-system etcd-controlplane | grep -i 127.0.0.1:2379
+
+      --listen-client-urls=https://127.0.0.1:2379,https://192.168.28.17:2379 ---> 127.0.0.1:2379
+-------------------------------------------------------------------------------
+
+4. Where is the ETCD server certificate file located?
+Note this path down as you will need to use it later
+
+controlplane ~ ➜  kubectl describe pod --namespace=kube-system etcd-controlplane | grep -i cert
+      --cert-file=/etc/kubernetes/pki/etcd/server.crt <--- Answer
+-------------------------------------------------------------------------------
+
+5. Where is the ETCD CA Certificate file located?
+Note this path down as you will need to use it later.
+
+controlplane ~ ➜  kubectl describe pod --namespace=kube-system etcd-controlplane | grep -i ca
+Priority Class Name:  system-node-critical
+      --peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+      --trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt <--- Answer
+-------------------------------------------------------------------------------
+
+6. The master node in our cluster is planned for a regular maintenance reboot tonight. 
+While we do not anticipate anything to go wrong, we are required to take the necessary backups. 
+Take a snapshot of the ETCD database using the built-in snapshot functionality.
+Store the backup file at location /opt/snapshot-pre-boot.db
+
+ETCDCTL_API=3 etcdctl --endpoints=https://[127.0.0.1]:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+     --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key \
+     snapshot save /opt/snapshot-pre-boot.db
+
+controlplane ~ ➜  ls -l /opt/
+total 1916
+drwxr-xr-x 1 root root    4096 Nov  6 11:41 cni
+drwx--x--x 1 root root    4096 Nov  6 11:41 containerd
+-rw-r--r-- 1 root root     543 Dec 29 11:45 kubeadm-config.yaml
+-rw-r--r-- 1 root root 1937440 Dec 29 12:04 snapshot-pre-boot.db
+-------------------------------------------------------------------------------
+
+7. Great! Let us now wait for the maintenance window to finish. Go get some sleep. (Don't go for real)
+Click Ok to Continue
+-------------------------------------------------------------------------------
+
+8. Wake up! We have a conference call! After the reboot the master nodes came back online, but none of our applications are accessible. 
+Check the status of the applications on the cluster. What's wrong?
+
+ubectl get deployments.app --> no
+kubectl get services --> There is "kubernetes   ClusterIP   172.20.0.1   <none>        443/TCP   76s"
+kubectl get pods --> no
+
+But answer is ---> All of the above (All do not exist, but srvice is presents ... oh ...)
+-------------------------------------------------------------------------------
+
+9. Luckily we took a backup. Restore the original state of the cluster using the backup file
+
+We need to restore backup to new catalo (for ex. - /var/lib/etcd-from-backup)
+This block:
+ETCDCTL_API=3 etcdctl snapshot restore --data-dir /var/lib/etcd-from-backup opt/snapshot-pre-boot.db
+
+--- or this block:
+
+ETCDCTL_API=3 etcdctl --name=master --endpoints=https://[127.0.0.1]:2379 \
+--cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt \
+--key=/etc/kubernetes/pki/etcd/server.key --data-dir /var/lib/etcd-from-backup \
+--initial-cluster=master=https://127.0.0.1:2380 --initial-cluster-token etcd-cluster-1 \
+--initial-advertise-peer-urls=https://127.0.0.1:2380 snapshot restore /opt/snapshot-pre-boot.db
+
+Then vi /etc/kubernetes/manifests/etcd.yaml --> edit the volumes section and change the hostPath on /var/lib/etcd-from-backup for name: etcd-data
+# initial-cluster-token and volume mounts
+
+wait for up to a minute for the etcd pod to reload.
+controlplane ~ ✖ kubectl get deployments
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+blue   3/3     3            3           36m
+red    2/2     2            2           36m
+
+controlplane ~ ➜  kubectl get services
+NAME           TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+blue-service   NodePort    172.20.138.159   <none>        80:30082/TCP   37m
+kubernetes     ClusterIP   172.20.0.1       <none>        443/TCP        42m
+red-service    NodePort    172.20.226.162   <none>        80:30080/TCP   37m
+-------------------------------------------------------------------------------
+
