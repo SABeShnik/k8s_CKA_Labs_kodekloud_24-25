@@ -1,0 +1,136 @@
+Init Containers
+
+1. Identify the pod that has an initContainer configured.
+controlplane ~ ➜  descp blue | grep -i init
+Init Containers:
+  init-myservice:
+  Initialized                 True 
+  Normal  Created    2m27s  kubelet            Created container init-myservice
+  Normal  Started    2m26s  kubelet            Started container init-myservice
+--- blue  
+-------------------------------------------------------------------------
+
+2. What is the image used by the initContainer on the blue pod?
+descp blue ---> busybox
+-------------------------------------------------------------------------
+
+3. What is the state of the initContainer on pod blue?
+kubectl describe pod blue ---> Terminated
+-------------------------------------------------------------------------
+
+4. Why is the initContainer terminated? What is the reason?
+Completed
+-------------------------------------------------------------------------
+
+5. We just created a new app named purple. How many initContainers does it have?
+controlplane ~ ➜  gp | grep purple
+purple   0/1     Init:0/2   0          3m50s
+
+controlplane ~ ➜  descp purple
+warm-up-1 & warm-up-2
+-------------------------------------------------------------------------
+
+6. What is the state of the POD?
+controlplane ~ ➜  descp purple | grep -i status
+Status:           Pending
+  Type                        Status
+-------------------------------------------------------------------------
+
+7. How long after the creation of the POD will the application come up and be available to users?
+MISTAKE (I think or not)
+controlplane ~ ➜  kubectl get pod purple -oyaml > purpPod.yml && cat purpPod.yml | grep sleep
+    - echo The app is running! && sleep 3600
+    - sleep 600
+    - sleep 1200
+Platform think that "30 minutes - is right answer", but YML has only 3600, 600 and 1200 values.
+There is no 1800 sec
+BUT
+maybe need summ container delays 1200 + 600 = 1800
+-------------------------------------------------------------------------
+
+8. Update the pod red to use an initContainer that uses the busybox image and 
+sleeps for 20 seconds
+Delete and re-create the pod if necessary. But make sure no other configurations change.
+
+Pod: red
+initContainer Configured Correctly
+
+controlplane ~ ➜  kubectl get pod red -oyaml > red.yml
+controlplane ~ ➜  kubectl delete pod red ---> pod "red" deleted
+controlplane ~ ➜  cat purpPod.yml ---> for getting an example
+
+under spec and after 
+spec:
+  containers:
+we have:
+initContainers:
+  - command:
+    - sh
+    - -c
+    - sleep 600
+    image: busybox:1.28
+    imagePullPolicy: IfNotPresent
+    name: warm-up-1
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-jf2pl
+      readOnly: true
+
+controlplane ~ ➜  vi red.yml
+add this block:
+initContainers:
+  - command:
+    - sh
+    - -c
+    - sleep 20
+    image: busybox
+    imagePullPolicy: IfNotPresent
+    name: warm-up-1
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+
+controlplane ~ ➜  kubectl create -f red.yml 
+pod/red created
+-------------------------------------------------------------------------
+
+9. A new application orange is deployed. There is something wrong with it. 
+Identify and fix the issue.
+Once fixed, wait for the application to run before checking solution.
+
+controlplane ~ ➜  gp | grep oran
+orange   0/1     Init:Error   2 (22s ago)   24s
+
+controlplane ~ ➜  descp orange
+    Command:
+      sh
+      -c
+      sleeeep 2;
+    State:          Waiting
+      Reason:       CrashLoopBackOff
+    Last State:     Terminated
+      Reason:       Error
+      Exit Code:    127
+
+controlplane ~ ➜  kubectl get pod orange -oyaml > o.yml
+controlplane ~ ➜  vi o.yml
+
+Bad block:
+  - command:
+    - sh
+    - -c
+    - sleeeep 2;
+Right block:
+  - command:
+    - sh
+    - -c
+    - sleep 2
+
+delp orange
+
+controlplane ~ ➜  kubectl create -f o.yml 
+pod/orange created
+-------------------------------------------------------------------------
