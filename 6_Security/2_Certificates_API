@@ -1,30 +1,147 @@
 2_Certificates_API
 
 
-1. 
+1. A new member "akshay" joined our team. He requires access to our cluster. 
+The Certificate Signing Request is at the /root location ---> Inspect it
+
+controlplane ~ ➜  ls /root
+akshay.csr  akshay.key
+
+controlplane ~ ➜  cat /root/akshay.csr 
+-----BEGIN CERTIFICATE REQUEST-----
+MIICVjCCAT4CAQAwETEPMA0GA1UEAwwGYWtzaGF5MIIBIjANBgkqhkiG9w0BAQEF
+AAOCAQ8AMIIBCgKCAQEAqeN8142inPqs1by7hxVfy+Zat6m3xgKXXZ0q5db765LH
+38eetqxw13BfpQHjMmnIIKq25t5O1XzTVWqPT/b2P423Ko/vfmtm8/Lxhmf8qRmi
+O9W0P9tzZQgaRM8Lj2/489IyxE8u5MEw9pQwlvKUYWYQLBTcFr51ysYWCx2ix/PR
+19K0j0uQ6rgmCukZqk9OQKtsYnhwlR/XkmQcOVUX/VD7/OI1RRiGUY9nQFwI/HfZ
+4PS96Kav7O3UGpgFK2Ogmjg7aqLWqK787LxFJ0g+xtWrYlvX7nhZ9BA8rPtMuUzt
+ujSwdNaK8qrbPR1kSU7h1/t+TeL0pNe8ldr1AVChQQIDAQABoAAwDQYJKoZIhvcN
+AQELBQADggEBAHo1VHSWqvnvxHxSxz0MP/MXWq9gA6RoXEpglnR/9Rcd6zLOMWIK
+PMDwTmPpm3yqAG1Imnkm/sKF3CKNcpoWWRkzH3Yw9yS7M4sbpC+oU+znetbcwYj2
+ulkZXYVifTvO4GAOhHVZoIn31LtstO/eWrnMMCpEJo91FXAyz29KxVTtHTdV5VL7
+uFsJm/Z3RfyJeB1q4g+V5qJzjD+3lU635d+fosnxKDwPfhbTYy2dpOydSBGBp3l6
+/uaDKOJWLQLng5iSLzlkLMrqC6fwS3ruExjsHNkWmTRR6oL7hko+Qe+EfKBIoMx/
+/AxcXoleJGEahz/FXuSMyBfJXNvfsC8dhtc=
+-----END CERTIFICATE REQUEST-----
 --------------------------------------------------------------------------------------------
 
-2. 
+2. Create a CertificateSigningRequest object with the name "akshay" with the contents of the akshay.csr file.
+As of kubernetes 1.19, the API to use for CSR is "certificates.k8s.io/v1".
+Please note that an additional field called "signerName" should also be added when creating CSR. 
+For client authentication to the API server we will use the built-in signer "kubernetes.io/kube-apiserver-client".
+
+controlplane ~ ➜  cat /root/akshay.csr | base64
+LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KTUlJQ1ZqQ0NBVDRDQVFBd0VURVBN
+QTBHQTFVRUF3d0dZV3R6YUdGNU1JSUJJakFOQmdrcWhraUc5dzBCQVFFRgpBQU9DQVE4QU1JSUJD
+Z0tDQVFFQXFlTjgxNDJpblBxczFieTdoeFZmeStaYXQ2bTN4Z0tYWFowcTVkYjc2NUxICjM4ZWV0
+cXh3MTNCZnBRSGpNbW5JSUtxMjV0NU8xWHpUVldxUFQvYjJQNDIzS28vdmZtdG04L0x4aG1mOHFS
+bWkKTzlXMFA5dHpaUWdhUk04TGoyLzQ4OUl5eEU4dTVNRXc5cFF3bHZLVVlXWVFMQlRjRnI1MXlz
+WVdDeDJpeC9QUgoxOUswajB1UTZyZ21DdWtacWs5T1FLdHNZbmh3bFIvWGttUWNPVlVYL1ZENy9P
+STFSUmlHVVk5blFGd0kvSGZaCjRQUzk2S2F2N08zVUdwZ0ZLMk9nbWpnN2FxTFdxSzc4N0x4Rkow
+Zyt4dFdyWWx2WDduaFo5QkE4clB0TXVVenQKdWpTd2ROYUs4cXJiUFIxa1NVN2gxL3QrVGVMMHBO
+ZThsZHIxQVZDaFFRSURBUUFCb0FBd0RRWUpLb1pJaHZjTgpBUUVMQlFBRGdnRUJBSG8xVkhTV3F2
+bnZ4SHhTeHowTVAvTVhXcTlnQTZSb1hFcGdsblIvOVJjZDZ6TE9NV0lLClBNRHdUbVBwbTN5cUFH
+MUltbmttL3NLRjNDS05jcG9XV1JrekgzWXc5eVM3TTRzYnBDK29VK3puZXRiY3dZajIKdWxrWlhZ
+VmlmVHZPNEdBT2hIVlpvSW4zMUx0c3RPL2VXcm5NTUNwRUpvOTFGWEF5ejI5S3hWVHRIVGRWNVZM
+Nwp1RnNKbS9aM1JmeUplQjFxNGcrVjVxSnpqRCszbFU2MzVkK2Zvc254S0R3UGZoYlRZeTJkcE95
+ZFNCR0JwM2w2Ci91YURLT0pXTFFMbmc1aVNMemxrTE1ycUM2ZndTM3J1RXhqc0hOa1dtVFJSNm9M
+N2hrbytRZStFZktCSW9NeC8KL0F4Y1hvbGVKR0VhaHovRlh1U015QmZKWE52ZnNDOGRodGM9Ci0t
+LS0tRU5EIENFUlRJRklDQVRFIFJFUVVFU1QtLS0tLQo=
+
+controlplane ~ ➜  vi myakshay.yml
+controlplane ~ ➜  cat myakshay.yml 
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+metadata:
+  name: akshay
+  namespace: default
+spec:
+  groups:
+  - system:authenticated
+  request:
+    LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KTUlJQ1ZqQ0NBVDRDQVFBd0VURVBNQTBHQTFVRUF3d0dZV3R6YUdGNU1JSUJJakFOQmdrcWhraUc5dzBCQVFFRgpBQU9DQVE4QU1JSUJDZ0tDQVFFQXFlTjgxNDJpblBxczFieTdoeFZmeStaYXQ2bTN4Z0tYWFowcTVkYjc2NUxICjM4ZWV0cXh3MTNCZnBRSGpNbW5JSUtxMjV0NU8xWHpUVldxUFQvYjJQNDIzS28vdmZtdG04L0x4aG1mOHFSbWkKTzlXMFA5dHpaUWdhUk04TGoyLzQ4OUl5eEU4dTVNRXc5cFF3bHZLVVlXWVFMQlRjRnI1MXlzWVdDeDJpeC9QUgoxOUswajB1UTZyZ21DdWtacWs5T1FLdHNZbmh3bFIvWGttUWNPVlVYL1ZENy9PSTFSUmlHVVk5blFGd0kvSGZaCjRQUzk2S2F2N08zVUdwZ0ZLMk9nbWpnN2FxTFdxSzc4N0x4RkowZyt4dFdyWWx2WDduaFo5QkE4clB0TXVVenQKdWpTd2ROYUs4cXJiUFIxa1NVN2gxL3QrVGVMMHBOZThsZHIxQVZDaFFRSURBUUFCb0FBd0RRWUpLb1pJaHZjTgpBUUVMQlFBRGdnRUJBSG8xVkhTV3F2bnZ4SHhTeHowTVAvTVhXcTlnQTZSb1hFcGdsblIvOVJjZDZ6TE9NV0lLClBNRHdUbVBwbTN5cUFHMUltbmttL3NLRjNDS05jcG9XV1JrekgzWXc5eVM3TTRzYnBDK29VK3puZXRiY3dZajIKdWxrWlhZVmlmVHZPNEdBT2hIVlpvSW4zMUx0c3RPL2VXcm5NTUNwRUpvOTFGWEF5ejI5S3hWVHRIVGRWNVZMNwp1RnNKbS9aM1JmeUplQjFxNGcrVjVxSnpqRCszbFU2MzVkK2Zvc254S0R3UGZoYlRZeTJkcE95ZFNCR0JwM2w2Ci91YURLT0pXTFFMbmc1aVNMemxrTE1ycUM2ZndTM3J1RXhqc0hOa1dtVFJSNm9MN2hrbytRZStFZktCSW9NeC8KL0F4Y1hvbGVKR0VhaHovRlh1U015QmZKWE52ZnNDOGRodGM9Ci0tLS0tRU5EIENFUlRJRklDQVRFIFJFUVVFU1QtLS0tLQo=
+  usages:
+  - digital signature
+  - key encipherment
+  - server auth
+  signerName: kubernetes.io/kube-apiserver-client
+
+controlplane ~ ➜  kubectl create -f myakshay.yml 
+certificatesigningrequest.certificates.k8s.io/akshay created
 --------------------------------------------------------------------------------------------
 
-3. 
+3. What is the Condition of the newly created Certificate Signing Request object?
+controlplane ~ ➜  kubectl get certificatesigningrequests.certificates.k8s.io 
+NAME        AGE   SIGNERNAME                                    REQUESTOR                  REQUESTEDDURATION   CONDITION
+akshay      82s   kubernetes.io/kube-apiserver-client           kubernetes-admin           <none>              Pending <--- Answer
+csr-bd4ch   47m   kubernetes.io/kube-apiserver-client-kubelet   system:node:controlplane   <none>              Approved,Issued
 --------------------------------------------------------------------------------------------
 
-4. 
+4. Approve the CSR Request
+
+ontrolplane ~ ➜  kubectl certificate approve akshay
+certificatesigningrequest.certificates.k8s.io/akshay approved
+
+controlplane ~ ➜  kubectl get certificatesigningrequests.certificates.k8s.io 
+NAME        AGE     SIGNERNAME                                    REQUESTOR                  REQUESTEDDURATION   CONDITION
+akshay      2m34s   kubernetes.io/kube-apiserver-client           kubernetes-admin           <none>              Approved,Failed
+csr-bd4ch   48m     kubernetes.io/kube-apiserver-client-kubelet   system:node:controlplane   <none>              Approved,Issued
 --------------------------------------------------------------------------------------------
 
-5. 
+5. How many CSR requests are available on the cluster? Including approved and pending ---> 2
 --------------------------------------------------------------------------------------------
 
-6. 
+6. During a routine check you realized that there is a new CSR request in place. What is the name of this request?
+controlplane ~ ➜  kubectl get certificatesigningrequests.certificates.k8s.io | grep -i pending
+agent-smith   42s     kubernetes.io/kube-apiserver-client           agent-x                    <none>              Pending
 --------------------------------------------------------------------------------------------
 
-7. 
+7. Hmmm.. You are not aware of a request coming in. What groups is this CSR requesting access to?
+Check the details about the request. Preferably in YAML.
+
+controlplane ~ ➜  kubectl describe certificatesigningrequests.certificates.k8s.io agent-smith 
+Name:               agent-smith
+Labels:             <none>
+Annotations:        <none>
+CreationTimestamp:  Sun, 29 Dec 2024 22:50:51 +0000
+Requesting User:    agent-x
+Signer:             kubernetes.io/kube-apiserver-client
+Status:             Pending
+Subject:
+         Common Name:    new-user
+         Serial Number:  
+Events:  <none>
+
+controlplane ~ ✖ kubectl get csr agent-smith -o yaml
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+metadata:
+  creationTimestamp: "2024-12-29T22:50:51Z"
+  name: agent-smith
+  resourceVersion: "4287"
+  uid: 03c9e303-45ab-43b4-b959-9fe5161e07da
+spec:
+  groups:
+  - system:masters < ----------- Answer
+  - system:authenticated
+  request: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KTUlJQ1dEQ0NBVUFDQ
 --------------------------------------------------------------------------------------------
 
-8. 
+8. That doesn't look very right. Reject that request.
+
+controlplane ~ ✖ kubectl certificate deny agent-smith
+certificatesigningrequest.certificates.k8s.io/agent-smith denied
+
+controlplane ~ ➜  kubectl get certificatesigningrequests.certificates.k8s.io | grep -i denied
+agent-smith   6m16s   kubernetes.io/kube-apiserver-client           agent-x                    <none>              Denied
 --------------------------------------------------------------------------------------------
 
-9. 
+9. Let's get rid of it. Delete the new CSR object
+
+controlplane ~ ➜  kubectl delete certificatesigningrequests.certificates.k8s.io agent-smith 
+certificatesigningrequest.certificates.k8s.io "agent-smith" deleted
+
+controlplane ~ ➜  kubectl get certificatesigningrequests.certificates.k8s.io | grep -i denied
+Is empty
 --------------------------------------------------------------------------------------------
 
