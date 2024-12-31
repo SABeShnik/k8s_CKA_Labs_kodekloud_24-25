@@ -1,30 +1,183 @@
 5_Cluster_Roles
 -------------------------------------
 
-1. 
+1. For the first few questions of this lab, you would have to inspect the existing ClusterRoles 
+and ClusterRoleBindings that have been created in this cluster.
+
+controlplane ~ ➜  kubectl get clusterrole
+NAME                                                                   CREATED AT
+admin                                                                  2024-12-31T07:33:16Z
+cluster-admin                                                          2024-12-31T07:33:16Z
+clustercidrs-node                                                      2024-12-31T07:33:21Z
+edit                                                                   2024-12-31T07:33:16Z
+k3s-cloud-controller-manager                                           2024-12-31T07:33:19Z
+local-path-provisioner-role                                            2024-12-31T07:33:19Z
+system:aggregate-to-admin                                              2024-12-31T07:33:16Z
+...                                                                    ...
+controlplane ~ ➜  kubectl get clusterrolebindings.rbac.authorization.k8s.io 
+cluster-admin                                                  system:controller:pod-garbage-collector
+clustercidrs-node                                              system:controller:pv-protection-controller
+helm-kube-system-traefik                                       system:controller:pvc-protection-controller
+helm-kube-system-traefik-crd                                   system:controller:replicaset-controller
+k3s-cloud-controller-manager                                   system:controller:replication-controller
+k3s-cloud-controller-manager-auth-delegator                    system:controller:resourcequota-controller
+kube-apiserver-kubelet-admin                                   system:controller:root-ca-cert-publisher
+local-path-provisioner-bind                                    system:controller:route-controller
+metrics-server:system:auth-delegator                           system:controller:service-account-controller
+system:basic-user                                              system:controller:service-controller
+...                                                                    ...
+
 
 ------------------------------------------------------------------------------------------------------------
 
-2. 
+2. How many ClusterRoles do you see defined in the cluster?
+controlplane ~ ✖ kubectl get clusterrole | wc -l  ---> 73 (-1 header)
 
 ------------------------------------------------------------------------------------------------------------
 
-3. 
+3. How many ClusterRoleBindings exist on the cluster?
+controlplane ~ ➜  kubectl get clusterrolebindings | wc -l ---> 58 (-1)
+------------------------------------------------------------------------------------------------------------
+
+4. What namespace is the cluster-admin clusterrole part of?
+controlplane ~ ✖ kubectl describe clusterrole cluster-admin
+Name:         cluster-admin
+Labels:       kubernetes.io/bootstrapping=rbac-defaults
+Annotations:  rbac.authorization.kubernetes.io/autoupdate: true
+PolicyRule:
+  Resources  Non-Resource URLs  Resource Names  Verbs
+  ---------  -----------------  --------------  -----
+  *.*        []                 []              [*]
+             [*]                []              [*]
+Cluster Roles are cluster wide and not part of any namespace <--- Answer
 
 ------------------------------------------------------------------------------------------------------------
 
-4. 
+5. What user/groups are the cluster-admin role bound to? The ClusterRoleBinding for the role is with the same name.
 
+controlplane ~ ➜  kubectl describe clusterrolebindings cluster-admin
+Name:         cluster-admin
+Labels:       kubernetes.io/bootstrapping=rbac-defaults
+Annotations:  rbac.authorization.kubernetes.io/autoupdate: true
+Role:
+  Kind:  ClusterRole
+  Name:  cluster-admin
+Subjects:
+  Kind   Name            Namespace
+  ----   ----            ---------
+  Group  system:masters ---> system:masters  
 ------------------------------------------------------------------------------------------------------------
 
-5. 
-
+6. What level of permission does the cluster-admin role grant?
+Inspect the cluster-admin role's privileges. ---> Perform any permissions
 ------------------------------------------------------------------------------------------------------------
 
-6. 
+7. A new user michelle joined the team. She will be focusing on the "nodes" in the cluster. 
+Create the required ClusterRoles and ClusterRoleBindings so she gets access to the nodes.
 
+Getting bkp:
+controlplane ~ ➜ kubectl get clusterrole cluster-admin -oyaml > myRoleForM.yml
+controlplane ~ ➜  kubectl get clusterrolebindings cluster-admin -oyaml > myRoleBindForM.yml
+
+controlplane ~ ➜  vi myRoleForM.yml 
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+#  creationTimestamp: "2024-12-31T07:33:16Z"
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: michelle-node-adm
+  resourceVersion: "71"
+#  uid: a78c358d-b438-4ea8-a9ca-e845468c420b
+rules:
+- apiGroups:
+  - '*' # ----------> "" indicates the core API group
+  resources:
+  - 'nodes'
+  verbs:
+  - '*'
+- nonResourceURLs:
+  - '*'
+  verbs:
+  - '*'
+
+controlplane ~ ➜  kubectl create -f myRoleForM.yml ---> clusterrole.rbac.authorization.k8s.io/michelle-node-adm created
+
+controlplane ~ ➜  kubectl get clusterrole michelle_node_adm
+NAME                CREATED AT
+michelle_node_adm   2024-12-31T07:50:39Z
+------------- --------------- -------------- ----------------- --------------
+controlplane ~ ➜  vi myRoleBindForM.yml 
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+#  creationTimestamp: "2024-12-31T07:33:16Z"
+#  labels:
+#    kubernetes.io/bootstrapping: rbac-defaults
+  name: michelle-node-adm # <--- Our New RoleBinding Name
+#  resourceVersion: "135"
+#  uid: ef6edf7e-ee13-4187-a88c-07d2e7187552
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+#  kind: Group
+  kind: User
+#  name: system:masters
+  name: michelle
+roleRef:
+  kind: ClusterRole
+  name: michelle-node-adm # <--- Our new Role
+  apiGroup: rbac.authorization.k8s.io
+
+ontrolplane ~ ➜  kubectl create -f myRoleBindForM.yml ---> clusterrolebinding.rbac.authorization.k8s.io/michelle-node-adm created
+
+controlplane ~ ➜  kubectl get clusterrolebindings michelle-node-adm
+NAME                ROLE                            AGE
+michelle-node-adm   ClusterRole/michelle-node-adm   22s
 ------------------------------------------------------------------------------------------------------------
 
-7. 
+8. michelle's responsibilities are growing and now she will be responsible for storage as well. 
+Create the required ClusterRoles and ClusterRoleBindings to allow her access to Storage.
+Get the API groups and resource names from command kubectl api-resources. Use the given spec:
+ClusterRole: storage-admin
+Resource: persistentvolumes
+Resource: storageclasses
+ClusterRoleBinding: michelle-storage-admin
+ClusterRoleBinding Subject: michelle
+ClusterRoleBinding Role: storage-admin
 
-------------------------------------------------------------------------------------------------------------
+controlplane ~ ➜  vi myStorageAdmRole.yml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: storage-admin
+rules:
+- apiGroups: [""]
+  resources: ["persistentvolumes"]
+  verbs: ["get", "watch", "list", "create", "delete"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses"]
+  verbs: ["get", "watch", "list", "create", "delete"]
+
+
+controlplane ~ ➜ vi myStorageAdmRoleBind.yml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: michelle-storage-admin
+subjects:
+- kind: User
+  name: michelle
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: storage-admin
+  apiGroup: rbac.authorization.k8s.io
+
+controlplane ~ ➜  kubectl create -f myStorageAdmRole.yml ---> clusterrole.rbac.authorization.k8s.io/storage-admin created
+
+controlplane ~ ➜  kubectl create -f myStorageAdmRoleBind.yml ---> clusterrolebinding.rbac.authorization.k8s.io/michelle-storage-admin created
+
