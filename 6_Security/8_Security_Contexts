@@ -4,29 +4,241 @@
 -----------------------------------------------------------------------------
 
 
-1. 
+1. What is the user used to execute the sleep process within the ubuntu-sleeper pod?
+In the current(default) namespace.
+controlplane ~ ➜  kubectl get pod ubuntu-sleeper 
+NAME             READY   STATUS    RESTARTS   AGE
+ubuntu-sleeper   1/1     Running   0          66s
+
+controlplane ~ ✖ kubectl exec ubuntu-sleeper -- ls -l /var/log
+total 236
+-rw-r--r-- 1 root root   4682 Nov 19 09:52 alternatives.log
+drwxr-xr-x 2 root root   4096 Nov 19 09:52 apt
+-rw-r--r-- 1 root root  61229 Nov 19 09:46 bootstrap.log
+-rw-rw---- 1 root utmp      0 Nov 19 09:46 btmp
+-rw-r--r-- 1 root root 167050 Nov 19 09:52 dpkg.log
+-rw-r--r-- 1 root root      0 Nov 19 09:46 faillog
+-rw-rw-r-- 1 root utmp      0 Nov 19 09:46 lastlog
+-rw-rw-r-- 1 root utmp      0 Nov 19 09:46 wtmp
+
+controlplane ~ ➜  kubectl exec ubuntu-sleeper -- grep "ls" /root/.history
+grep: /root/.history: No such file or directory
+command terminated with exit code 2
+??????????
+----------> root
 -----------------------------------------------------------------------------
 
-2. 
+2. Edit the pod ubuntu-sleeper to run the sleep process with user ID 1010.
+Note: Only make the necessary changes. Do not modify the name or image of the pod.
+
+controlplane ~ ✖ kubectl get pod ubuntu-sleeper -oyaml > pod1.yml
+controlplane ~ ➜  vi pod1.yml 
+
+controlplane ~ ➜  kubectl delete pod ubuntu-sleeper ---> pod "ubuntu-sleeper" deleted
+controlplane ~ ➜  kubectl create -f pod1.yml  ---> pod/ubuntu-sleeper created
+ORIGINAL POD + 1010:
+controlplane ~ ✖ cat pod1.yml 
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2024-12-31T19:33:57Z"
+  name: ubuntu-sleeper
+  namespace: default
+  resourceVersion: "847"
+  uid: b9da7c98-d4a2-4d72-b2a2-151231caebaa
+spec:
+  containers:
+  - command:
+    - sleep
+    - "4800"
+     securityContext:   <------------
+    runAsUser: 1010     <------------
+    image: ubuntu
+    imagePullPolicy: Always
+    name: ubuntu
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-bdssm
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: controlplane
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - name: kube-api-access-bdssm
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-31T19:33:59Z"
+    status: "True"
+    type: PodReadyToStartContainers
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-31T19:33:57Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-31T19:33:59Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-31T19:33:59Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2024-12-31T19:33:57Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: containerd://2075ef7d7221e83173b48d186f14b0b0be732fa104c61737b64194db4f4f47ee
+    image: docker.io/library/ubuntu:latest
+    imageID: docker.io/library/ubuntu@sha256:80dd3c3b9c6cecb9f1667e9290b3bc61b78c2678c02cbdae5f0fea92cc6734ab
+    lastState: {}
+    name: ubuntu
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2024-12-31T19:33:59Z"
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-bdssm
+      readOnly: true
+      recursiveReadOnly: Disabled
+  hostIP: 192.168.211.149
+  hostIPs:
+  - ip: 192.168.211.149
+  phase: Running
+  podIP: 10.42.0.9
+  podIPs:
+  - ip: 10.42.0.9
+  qosClass: BestEffort
+  startTime: "2024-12-31T19:33:57Z"
 -----------------------------------------------------------------------------
 
-3. 
+3. A Pod definition file named multi-pod.yaml is given. With what user are the processes in the web container started?
+The pod is created with multiple containers and security contexts defined at the Pod and Container level.
+
+controlplane ~ ➜  cat multi-pod.yaml | grep -i user
+    runAsUser: 1001
+      runAsUser: 1002
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multi-pod
+spec:
+  securityContext:
+    runAsUser: 1001
+  containers:
+  -  image: ubuntu
+     name: web
+     command: ["sleep", "5000"]
+     securityContext:
+      runAsUser: 1002
+
+  -  image: ubuntu
+     name: sidecar
+     command: ["sleep", "5000"]
+-------------------------------------> 1002
 -----------------------------------------------------------------------------
 
-4. 
+4. With what user are the processes in the sidecar container started? -----> 1001 (above there is yml)
+The pod is created with multiple containers and security contexts defined at the Pod and Container level.
 -----------------------------------------------------------------------------
 
-5. 
+5. Update pod ubuntu-sleeper to run as Root user and with the SYS_TIME capability.
+Note: Only make the necessary changes. Do not modify the name of the pod.
+Pod Name: ubuntu-sleeper
+Image Name: ubuntu
+SecurityContext: user = root
+SecurityContext: Capability SYS_TIME
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2024-12-31T19:57:29Z"
+  name: ubuntu-sleeper
+  namespace: default
+  resourceVersion: "1281"
+  uid: 71eec91d-5239-475c-b9b3-b281705ce239
+spec:
+  containers:
+  - command:
+    - sleep
+    - "4800"
+    securityContext:
+      runAsUser: 1000
+      capabilities:
+        add: ["SYS_TIME"]
+    image: ubuntu
+    imagePullPolicy: Always
+    name: ubuntu
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-bdssm
+      readOnly: true
+  dnsPolicy: ClusterFirst
+
+Result: need remove runasuser string and add capabilities: add: ["SYS_TIME"]
+???????????????????
 -----------------------------------------------------------------------------
 
-6. 
------------------------------------------------------------------------------
+6. Now update the pod to also make use of the NET_ADMIN capability.
+Note: Only make the necessary changes. Do not modify the name of the pod.
 
-7. 
------------------------------------------------------------------------------
+Pod Name: ubuntu-sleeper
+Image Name: ubuntu
+SecurityContext: Capability SYS_TIME
+SecurityContext: Capability NET_ADMIN
 
-8. 
------------------------------------------------------------------------------
-
-9. 
+spec:
+  containers:
+  - command:
+    - sleep
+    - "4800"
+    securityContext:
+#      runAsUser: 1000
+      capabilities:
+        add: ["SYS_TIME","NET_ADMIN"]
 -----------------------------------------------------------------------------
