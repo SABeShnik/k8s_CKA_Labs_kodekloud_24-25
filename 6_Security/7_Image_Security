@@ -1,0 +1,80 @@
+7_Image_Security
+
+
+1. What secret type must we choose for docker registry? ---> docker-registry
+---------------------------------------------------------------------------------------------------------------
+
+2. We have an application running on our cluster. Let us explore it first. What image is the application using?
+root@controlplane ~ ✖ kubectl get deployments.apps 
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+web    2/2     2            2           2m5s
+
+root@controlplane ~ ➜  kubectl describe deployments.apps | grep -i image
+    Image:         nginx:alpine
+---------------------------------------------------------------------------------------------------------------
+
+3. We decided to use a modified version of the application from an internal private registry. 
+Update the image of the deployment to use a new image from myprivateregistry.com:5000
+The registry is located at myprivateregistry.com:5000. Don't worry about the credentials for now. We will configure them in the upcoming steps.
+
+root@controlplane ~ ➜  kubectl edit deployments.apps web 
+deployment.apps/web edited
+- image: nginx:alpine
+to
+- image: myprivateregistry.com:5000/nginx:alpine
+---------------------------------------------------------------------------------------------------------------
+
+4. Are the new PODs created with the new images successfully running?
+root@controlplane ~ ➜  kubectl get pods
+NAME                  READY   STATUS         RESTARTS   AGE
+web-749fcb599-hgfjt   0/1     ErrImagePull   0          57s   ---> No
+web-cbfbbd684-kkjx5   1/1     Running        0          5m58s
+web-cbfbbd684-qtcrb   1/1     Running        0          5m58s 
+
+---------------------------------------------------------------------------------------------------------------
+5. Create a secret object with the credentials required to access the registry.
+Name: private-reg-cred
+Username: dock_user  ----------------------> echo "text" | base64 ---> ZG9ja191c2VyCg==
+Password: dock_password  ------------------> echo "text" | base64 ---> ZG9ja19wYXNzd29yZAo=
+Server: myprivateregistry.com:5000      ---> echo "text" | base64 ---> bXlwcml2YXRlcmVnaXN0cnkuY29tOjUwMDAK
+Email: dock_user@myprivateregistry.com  ---> echo "text" | base64 ---> ZG9ja191c2VyQG15cHJpdmF0ZXJlZ2lzdHJ5LmNvbQo=
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: private-reg-cred
+data:
+  username: ZG9ja191c2VyCg==
+  password: ZG9ja19wYXNzd29yZAo=
+  server: bXlwcml2YXRlcmVnaXN0cnkuY29tOjUwMDAK
+  email: ZG9ja191c2VyQG15cHJpdmF0ZXJlZ2lzdHJ5LmNvbQo=
+
+kubectl create secret docker-registry private-reg-cred \
+--docker-server=myprivateregistry.com:5000 --docker-username=dock_user \
+--docker-password=dock_password --docker-email=dock_user@myprivateregistry.com < --- Answer
+---------------------------------------------------------------------------------------------------------------
+
+6. Configure the deployment to use credentials from the new secret to pull images from the private registry
+root@controlplane ~ ➜  kubectl get deployments.apps web -oyaml > depl.yml
+--- or ---
+root@controlplane ~ ➜  kubectl edit deployments.apps web
+add "imagePullSecrets:" and below "- name: private-reg-cred"
+--- EXAMPLE ---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: private-reg
+spec:
+  containers:
+  - name: private-reg-container
+    image: <your-private-image>
+  imagePullSecrets:
+  - name: regcred
+---------------------------------------------------------------------------------------------------------------
+
+7. Check the status of PODs. Wait for them to be running. You have now successfully configured a Deployment to pull images from the private registry.
+root@controlplane ~ ➜  kubectl get pods
+NAME                   READY   STATUS    RESTARTS   AGE
+web-8569544bdb-dsvvt   1/1     Running   0          86s
+web-8569544bdb-m2gd2   1/1     Running   0          85s
+---------------------------------------------------------------------------------------------------------------
