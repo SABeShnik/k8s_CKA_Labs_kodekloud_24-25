@@ -1,28 +1,69 @@
 5_Service_Networking
 
-1. 
+
+1. What network range are the nodes in the cluster part of?
+Run the command: ip addr and look at the IP address assigned to the eth0 interfaces. Derive network range from that.
+controlplane ~ ➜  ip addr show eth0
+11460: eth0@if11461: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP group default 
+    link/ether 02:42:c0:12:59:06 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 192.18.89.6/24 brd 192.18.89.255 scope global eth0 ---> 192.18.89.0/24
+
+ipcalc -b <IP>
 ------------------------------------------------------------------------------------
 
-2. 
+2. What is the range of IP addresses configured for PODs on this cluster?
+controlplane ~ ➜  kubectl get pods -n kube-system | grep weave
+weave-net-hllkv                        2/2     Running   0             60m
+weave-net-pq9vl                        2/2     Running   1 (60m ago)   60m
+
+controlplane ~ ➜  ip addr show weave 
+4: weave: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1376 qdisc noqueue state UP group default qlen 1000
+    link/ether d2:44:0a:8f:6a:07 brd ff:ff:ff:ff:ff:ff
+    inet 10.244.0.1/16 brd 10.244.255.255 scope global weave
+
+controlplane ~ ➜  kubectl logs weave-net-hllkv -n kube-system | grep ipalloc-range
+Defaulted container "weave" out of: weave, weave-npc, weave-init (init)
+INFO: 2025/01/09 18:32:21.792147 Command line options: map[conn-limit:200 datapath:datapath 
+db-prefix:/weavedb/weave-net docker-api: expect-npc:true http-addr:127.0.0.1:6784
+ipalloc-init:consensus=1 ipalloc-range:10.244.0.0/16 metrics-addr:0.0.0.0:6782 name:3a:c7:f5:18:9b:fb 
+nickname:node01 no-dns:true no-masq-local:true port:6783]
+
+---> 10.244.0.0/16
 ------------------------------------------------------------------------------------
 
-3. 
+3. What is the IP Range configured for the services within the cluster?
+Inspect the setting on kube-api server by running on command 
+
+controlplane ~ ➜  cat /etc/kubernetes/manifests/kube-apiserver.yaml   | grep cluster-ip-range
+    - --service-cluster-ip-range=10.96.0.0/12
 ------------------------------------------------------------------------------------
 
-4. 
+4. How many kube-proxy pods are deployed in this cluster?
+
+controlplane ~ ➜  kubectl get pods -n kube-system | grep proxy 
+NAME                                   READY   STATUS    RESTARTS      AGE
+kube-proxy-2w8cm                       1/1     Running   0             60m
+kube-proxy-z8gk5                       1/1     Running   0             59m
+
+controlplane ~ ✖ kubectl get pods -n kube-system | grep proxy | wc -l
+2
 ------------------------------------------------------------------------------------
 
-5. 
+5. What type of proxy is the kube-proxy configured to use?
+Check the logs of the kube-proxy pods. Run the command: 
+controlplane ~ ➜  kubectl logs kube-proxy-2w8cm -n kube-system | grep -i using
+I0109 18:31:52.947225       1 server_linux.go:66] "Using iptables proxy" ---> iptables
 ------------------------------------------------------------------------------------
 
-6. 
-------------------------------------------------------------------------------------
+6. How does this Kubernetes cluster ensure that a kube-proxy pod runs on all nodes in the cluster?
+Inspect the kube-proxy pods and try to identify how they are deployed.
 
-7. 
-------------------------------------------------------------------------------------
+controlplane ~ ✖ kubectl describe pods -n kube-system kube-proxy-2w8cm | grep -i "Controlled By:"
+Controlled By:  DaemonSet/kube-proxy
 
-8. 
-------------------------------------------------------------------------------------
+controlplane ~ ✖ kubectl get ds -n kube-system
+NAME         DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE
+kube-proxy   2         2         2       2            2           kubernetes.io/os=linux   78m
+weave-net    2         2         2       2            2           <none>                   78m
 
-9. 
 ------------------------------------------------------------------------------------
