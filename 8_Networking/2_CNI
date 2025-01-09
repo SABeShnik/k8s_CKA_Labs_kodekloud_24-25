@@ -1,18 +1,67 @@
 2_CNI
 
-1. 
+1. Inspect the kubelet service and identify the container runtime endpoint value is set for Kubernetes.
+
+controlplane ~ ➜  ps -aux | grep kubelet | grep --color container-runtime-endpoint
+root        4178  0.0  0.1 2930980 90932 ?       Ssl  09:22   0:03 /usr/bin/kubelet 
+--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf 
+--config=/var/lib/kubelet/config.yaml --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock 
+--pod-infra-container-image=registry.k8s.io/pause:3.10
+
+unix:///var/run/containerd/containerd.sock <--- Answer
 ---------------------------------------------------------------------------------
 
-2. 
+2. What is the path configured with all binaries of CNI supported plugins?
+
+The CNI binaries are located under /opt/cni/bin by default.
 ---------------------------------------------------------------------------------
 
-3. 
+3. Identify which of the below plugins is not available in the list of available CNI plugins on this host?
+
+controlplane ~ ✖ ls -l /opt/cni/bin | grep vlan
+-rwxr-xr-x 1 root root  4443729 Aug 29 21:33 ipvlan
+-rwxr-xr-x 1 root root  4480422 Aug 29 21:33 macvlan
+-rwxr-xr-x 1 root root  4440528 Aug 29 21:33 vlan
+controlplane ~ ➜  ls -l /opt/cni/bin | grep dhcp
+-rwxr-xr-x 1 root root 11419738 Aug 29 21:33 dhcp
+controlplane ~ ➜  ls -l /opt/cni/bin | grep bridge
+-rwxr-xr-x 1 root root  4788191 Aug 29 21:33 bridge
+controlplane ~ ➜  ls -l /opt/cni/bin | grep cisco ---> controlplane ~ ✖ ---> Answer cisco
+
 ---------------------------------------------------------------------------------
 
-4. 
+4. What is the CNI plugin configured to be used on this kubernetes cluster?
+Run the command: ls /etc/cni/net.d/ and identify the name of the plugin.
+controlplane ~ ✖ ls /etc/cni/net.d/
+10-flannel.conflist
+
 ---------------------------------------------------------------------------------
 
-5. 
+5. What binary executable file will be run by kubelet after 
+a container and its associated namespace are created?
+
+Look at the type field in file /etc/cni/net.d/10-flannel.conflist.
+controlplane ~ ➜  cat /etc/cni/net.d/10-flannel.conflist 
+{
+  "name": "cbr0",
+  "cniVersion": "0.3.1",
+  "plugins": [
+    {
+      "type": "flannel", ---> flannel Answer
+      "delegate": {
+        "hairpinMode": true,
+        "isDefaultGateway": true
+      }
+    },
+    {
+      "type": "portmap",
+      "capabilities": {
+        "portMappings": true
+      }
+    }
+  ]
+}
+
 ---------------------------------------------------------------------------------
 
 6. 
