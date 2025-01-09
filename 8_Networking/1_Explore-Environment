@@ -1,0 +1,110 @@
+Practice Test - Explore Environment
+
+1. How many nodes are part of this cluster? ---> 2
+Including the controlplane and worker nodes.
+
+controlplane ~ ➜  kubectl get nodes 
+NAME           STATUS   ROLES           AGE   VERSION
+controlplane   Ready    control-plane   86s   v1.31.0
+node01         Ready    <none>          50s   v1.31.0
+----------------------------------------------------------------------------------
+
+2. What is the Internal IP address of the controlplane node in this cluster?
+controlplane ~ ➜  kubectl describe  nodes controlplane | grep -i internalip
+  InternalIP:  192.168.183.228
+----------------------------------------------------------------------------------
+
+3. What is the network interface configured for cluster connectivity on the controlplane node?
+( node-to-node communication )
+Got previous IP for find interface:
+
+controlplane ~ ➜  ip a | grep -B2 192.168.183.228
+3: eth0@if27473: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1410 qdisc noqueue state UP group default 
+    link/ether 7a:a0:0d:19:0b:16 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 192.168.183.228/32 scope global eth0 ---> eth0
+----------------------------------------------------------------------------------
+
+4. What is the MAC address of the interface on the controlplane node?
+controlplane ~ ➜  ip a | grep -B2 192.168.183.228
+3: eth0@if27473: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1410 qdisc noqueue state UP group default 
+    link/ether 7a:a0:0d:19:0b:16 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 192.168.183.228/32 scope global eth0 ---> 7a:a0:0d:19:0b:16
+---------------------------------------------------------------------------------- 
+
+5. What is the IP address assigned to node01?
+controlplane ~ ➜  kubectl describe  nodes node01 | grep -i internalip
+  InternalIP:  192.168.212.129
+  --- or ---
+  kubectl get nodes -o wide
+----------------------------------------------------------------------------------
+
+6. What is the MAC address assigned to node01?
+
+controlplane ~ ➜  ssh node01
+Welcome to Ubuntu 22.04.4 LTS (GNU/Linux 5.15.0-1074-gcp x86_64)
+
+node01 ~ ➜  ip a | grep -B2 192.168.212.129
+3: eth0@if2311: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1410 qdisc noqueue state UP group default 
+    link/ether 7e:d0:64:e8:db:1f brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 192.168.212.129/32 scope global eth0 ---> 7e:d0:64:e8:db:1f
+----------------------------------------------------------------------------------
+
+7. We use Containerd as our container runtime. ---> cni0 ( ? )
+What is the interface/bridge created by Containerd on the controlplane node?
+----------------------------------------------------------------------------------
+
+8. What is the state of the interface cni0? ---> Up
+controlplane ~ ✖ ip link show cni0
+5: cni0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1360 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether 1e:70:d7:59:cc:58 brd ff:ff:ff:ff:ff:ff
+----------------------------------------------------------------------------------
+
+9. If you were to ping google from the controlplane node, which route does it take?
+What is the IP address of the Default Gateway?
+
+controlplane ~ ✖ ip route
+default via 169.254.1.1 dev eth0 
+169.254.1.1 dev eth0 scope link 
+172.17.0.0/24 dev cni0 proto kernel scope link src 172.17.0.1 
+172.17.1.0/24 via 172.17.1.0 dev flannel.1 onlink 
+
+controlplane ~ ✖ ip route show default
+default via 169.254.1.1 dev eth0 ---> 169.254.1.1
+----------------------------------------------------------------------------------
+
+10. What is the port the kube-scheduler is listening on in the controlplane node?
+Control plane
+Protocol	Direction	Port Range	Purpose	Used By
+TCP	Inbound	6443	Kubernetes API server	All
+TCP	Inbound	2379-2380	etcd server client API	kube-apiserver, etcd
+TCP	Inbound	10250	Kubelet API	Self, Control plane
+TCP	Inbound	10259	kube-scheduler	Self  <------- Answer ------------<
+TCP	Inbound	10257	kube-controller-manager	Self
+Although etcd ports are included in control plane section, you can also host your own etcd cluster externally or on custom ports.
+
+Worker node(s)
+Protocol	Direction	Port Range	Purpose	Used By
+TCP	Inbound	10250	Kubelet API	Self, Control plane
+TCP	Inbound	10256	kube-proxy	Self, Load balancers
+TCP	Inbound	30000-32767	NodePort Services†	All
+--- or ---
+controlplane ~ ➜  netstat -nplt | grep scheduler
+tcp        0      0 127.0.0.1:10259         0.0.0.0:*               LISTEN      3502/kube-scheduler
+----------------------------------------------------------------------------------
+
+11. Notice that ETCD is listening on two ports. Which of these have more client connections established?
+TCP	Inbound	2379-2380	etcd server client API	kube-apiserver, etcd
+
+controlplane ~ ➜  netstat -nplt | grep etcd ---> Answer ---> 2379
+tcp        0      0 127.0.0.1:2379          0.0.0.0:*               LISTEN      3891/etcd           
+tcp        0      0 127.0.0.1:2381          0.0.0.0:*               LISTEN      3891/etcd           
+tcp        0      0 192.168.183.228:2379    0.0.0.0:*               LISTEN      3891/etcd           
+tcp        0      0 192.168.183.228:2380    0.0.0.0:*               LISTEN      3891/etcd   
+
+controlplane ~ ➜  netstat -npltu | grep etcd | grep 2379 | wc -l  ---> 2
+controlplane ~ ➜  netstat -npltu | grep etcd | grep 2380 | wc -l  ---> 1
+----------------------------------------------------------------------------------
+
+12. Correct! That's because 2379 is the port of ETCD to which all control plane components connect to. 
+2380 is only for etcd peer-to-peer connectivity. When you have multiple controlplane nodes. In this case we don't.
+----------------------------------------------------------------------------------
