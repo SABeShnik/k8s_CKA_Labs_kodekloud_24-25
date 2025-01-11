@@ -1,4 +1,9 @@
-3_Deploy_Network_Solution
+**************************************************************************
+******* 3_Deploy_Network_Solution ****************************************
+**************************************************************************
+-----------------------------------------------------------------------------
+
+
 
 1. In this practice test we will install weave-net POD networking solution to the cluster. 
 Let us first inspect the setup.
