@@ -3,6 +3,7 @@
 **************************************************************************
 -----------------------------------------------------------------------------
 
+
 1. How many StorageClasses exist in the cluster right now? ---> 1
 controlplane ~ ➜  kubectl get storageclasses.storage.k8s.io 
 NAME                   PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
