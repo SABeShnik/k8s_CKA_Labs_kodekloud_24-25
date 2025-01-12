@@ -281,8 +281,8 @@ spec:
 ----------------------------------------------------------------------------------------------
 
 8. Create the ingress resource to make the applications available at "/wear" and "/watch" on the Ingress service.
-Also, make use of "rewrite-target" annotation field: -
-nginx.ingress.kubernetes.io/rewrite-target: /
+Also, make use of "rewrite-target" annotation field: 
+- nginx.ingress.kubernetes.io/rewrite-target: /
 Ingress resource comes under the namespace scoped, so don't forget to create the ingress in the "app-space" namespace.
 
 Ingress Created
