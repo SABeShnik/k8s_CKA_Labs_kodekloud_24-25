@@ -46,12 +46,14 @@ app-space     replicaset.apps/webapp-wear-6886df6554       1         1         1
 kube-system   replicaset.apps/coredns-77d6fd4654           2         2         2       94s
 ----------------------------------------------------------------------------------------------
 
+
 2. Let us now deploy an Ingress Controller. First, create a namespace called ingress-nginx.
 We will isolate all ingress related objects into its own namespace.
 
 controlplane ~ ➜  kubectl create namespace ingress-nginx
 namespace/ingress-nginx created
 ----------------------------------------------------------------------------------------------
+
 
 3. The NGINX Ingress Controller requires a ConfigMap object. 
 Create a ConfigMap object with name ingress-nginx-controller in the ingress-nginx namespace.
@@ -62,6 +64,7 @@ controlplane ~ ➜  kubectl create configmap ingress-nginx-controller --namespac
 configmap/ingress-nginx-controller created
 ----------------------------------------------------------------------------------------------
 
+
 4. The NGINX Ingress Controller requires two ServiceAccounts. 
 Create both ServiceAccount with name "ingress-nginx" and "ingress-nginx-admission" in the ingress-nginx namespace.
 Use the spec provided below.
@@ -71,10 +74,9 @@ controlplane ~ ➜ kubectl create serviceaccount ingress-nginx -n ingress-nginx 
 controlplane ~ ➜ kubectl create sa ingress-nginx-admission -n ingress-nginx -> serviceaccount/ingress-nginx-admission created
 ----------------------------------------------------------------------------------------------
 
-5. We have created the Roles, RoleBindings, ClusterRoles, and ClusterRoleBindings for the ServiceAccount. Check it out!!
-----------------------------------------------------------------------------------------------
 
-6. controlplane ~ ➜  kubectl get role -n ingress-nginx
+5. We have created the Roles, RoleBindings, ClusterRoles, and ClusterRoleBindings for the ServiceAccount. Check it out!!
+controlplane ~ ➜  kubectl get role -n ingress-nginx
 NAME                      CREATED AT
 ingress-nginx             2025-01-12T15:40:41Z
 ingress-nginx-admission   2025-01-12T15:40:41Z
@@ -107,7 +109,8 @@ kubeadm:node-autoapprove-bootstrap                              ClusterRole/syst
 kubeadm:node-autoapprove-certificate-rotation                   ClusterRole/system:certificates.k8s.io:certificatesigningrequests:selfnodeclient
 ----------------------------------------------------------------------------------------------
 
-7. Let us now deploy the Ingress Controller. Create the Kubernetes objects using the given file.
+
+6. Let us now deploy the Ingress Controller. Create the Kubernetes objects using the given file.
 The Deployment and it's service configuration is given at /root/ingress-controller.yaml. 
 There are several issues with it. Try to fix them.
 Note: Do not edit the default image provided in the given file. 
@@ -125,6 +128,9 @@ ingress-controller.yaml
 
 controlplane ~ ✖ ls /root/
 ingress-controller.yaml
+
+controlplane ~ ➜  echo "set number" >> ~/.vimrc 
+controlplane ~ ➜ vi /root/ingress-controller.yaml
 -------------------------------------
 Edit str #13:  "namespace: ingress-" --------> "ingress-nginx"
 Edit str #73:  "  containerPort: 80" --------> "containerPort: 80" (remove 2 spaces before str)
@@ -132,6 +138,10 @@ Edit str #130: "name: ingress-controller" ---> "ingress-nginx-controller"
 Edit str #137: "nodeport: 30080" ------------> "nodePort: 30080"
 -------------------------------------------------
 
+controlplane ~ ➜  kubectl create -f /root/ingress-controller.yaml
+deployment.apps/ingress-nginx-controller created
+service/ingress-nginx-controller created
+--------------------------------------------------
 
 Solution manifest file to create a "ingress-controller.yaml" as follows: -
 
@@ -299,6 +309,16 @@ Error from server (AlreadyExists): namespaces "app-space" already exists
 controlplane ~ ➜  kubectl get ns  | grep app
 app-space         Active   28m
 
+controlplane ~ ➜  kubectl describe service -n app-space video-service | grep -i port
+Port:                     <unset>  8080/TCP
+TargetPort:               8080/TCP
+
+controlplane ~ ➜  kubectl describe service -n app-space wear-service | grep -i port
+Port:                     <unset>  8080/TCP
+TargetPort:               8080/TCP
+
+
+
 vi ingress.yml
 --- ORIGINAL ingress ---------------------
 apiVersion: networking.k8s.io/v1
@@ -336,7 +356,11 @@ status:
     ingress:
     - ip: 172.20.20.107
 
+
+
+controlplane ~ ➜  kubectl create -f ingress.yml 
 ingress.networking.k8s.io/ingress-wear-watch created
+
 
 --- or --- 
 Solution manifest file to create a ingress resource as follows:
@@ -374,3 +398,69 @@ spec:
 Make sure you can access the right applications at /wear and /watch paths.
 https://30080-port-jxzp6bw4wll2bj7s.labs.kodekloud.com/wear
 ----------------------------------------------------------------------------------------------
+
+
+WEAR-SERVICE
+ # Please edit the object below. Lines beginning with a '#' will be ignored,
+  2 # and an empty file will abort the edit. If an error occurs while saving this file will be
+  3 # reopened with the relevant failures.
+  4 #
+  5 apiVersion: v1
+  6 kind: Service
+  7 metadata:
+  8   creationTimestamp: "2025-01-12T16:16:49Z"
+  9   name: wear-service
+ 10   namespace: app-space
+ 11   resourceVersion: "1867"
+ 12   uid: 1f8ce94f-8cee-4b9d-bb3e-cdfcc847bb81
+ 13 spec:
+ 14   clusterIP: 172.20.115.251
+ 15   clusterIPs:
+ 16   - 172.20.115.251
+ 17   internalTrafficPolicy: Cluster
+ 18   ipFamilies:
+ 19   - IPv4
+ 20   ipFamilyPolicy: SingleStack
+ 21   ports:
+ 22   - port: 8090 # earier was 8080, my experiment
+ 23     protocol: TCP
+ 24     targetPort: 8080
+ 25   selector:
+ 26     app: webapp-wear
+ 27   sessionAffinity: None
+ 28   type: ClusterIP
+ 29 status:
+ 30   loadBalancer: {}
+
+
+VIDEO-SERVICE
+ 1 # Please edit the object below. Lines beginning with a '#' will be ignored,
+  2 # and an empty file will abort the edit. If an error occurs while saving this file will be
+  3 # reopened with the relevant failures.
+  4 #
+  5 apiVersion: v1
+  6 kind: Service
+  7 metadata:
+  8   creationTimestamp: "2025-01-12T16:16:49Z"
+  9   name: video-service
+ 10   namespace: app-space
+ 11   resourceVersion: "627"
+ 12   uid: 71c33c88-97fb-40d1-ad3e-a460dff9e97f
+ 13 spec:
+ 14   clusterIP: 172.20.1.240
+ 15   clusterIPs:
+ 16   - 172.20.1.240
+ 17   internalTrafficPolicy: Cluster
+ 18   ipFamilies:
+ 19   - IPv4
+ 20   ipFamilyPolicy: SingleStack
+ 21   ports:
+ 22   - port: 8080
+ 23     protocol: TCP
+ 24     targetPort: 8080
+ 25   selector:
+ 26     app: webapp-video
+ 27   sessionAffinity: None
+ 28   type: ClusterIP
+ 29 status:
+ 30   loadBalancer: {}
