@@ -126,10 +126,10 @@ ingress-controller.yaml
 controlplane ~ ✖ ls /root/
 ingress-controller.yaml
 -------------------------------------
-Edit str #13:  "namespace: ingress-" ---> "ingress-nginx"
-Edit str #73:  "  containerPort: 80" ---> "containerPort: 80" (remove 2 spaces before str)
+Edit str #13:  "namespace: ingress-" --------> "ingress-nginx"
+Edit str #73:  "  containerPort: 80" --------> "containerPort: 80" (remove 2 spaces before str)
 Edit str #130: "name: ingress-controller" ---> "ingress-nginx-controller"
-Edit str #137: "nodeport: 30080" ---> "nodePort: 30080"
+Edit str #137: "nodeport: 30080" ------------> "nodePort: 30080"
 -------------------------------------------------
 
 
