@@ -1,29 +1,134 @@
 **************************************************************************
-******* 8_CKA_-_Ingress_Networking_-_1 ***********************************
+******* 8_CKA_-_Ingress_Networking_-_2 ***********************************
 **************************************************************************
 -----------------------------------------------------------------------------
 
 
 
-1. 
+1. We have deployed two applications. Explore the setup.
+Note: They are in a different namespace.
+
+controlplane ~ ➜  kubectl get all --all-namespaces 
+NAMESPACE      NAME                                       READY   STATUS    RESTARTS   AGE
+app-space      pod/default-backend-5cd488d85c-sw2mv       1/1     Running   0          44s
+app-space      pod/webapp-video-cb475db9c-bqhvj           1/1     Running   0          44s
+app-space      pod/webapp-wear-6886df6554-s6rb2           1/1     Running   0          44s
+kube-flannel   pod/kube-flannel-ds-k7t96                  1/1     Running   0          94s
+kube-system    pod/coredns-77d6fd4654-fwh25               1/1     Running   0          93s
+kube-system    pod/coredns-77d6fd4654-hhq97               1/1     Running   0          93s
+kube-system    pod/etcd-controlplane                      1/1     Running   0          100s
+kube-system    pod/kube-apiserver-controlplane            1/1     Running   0          100s
+kube-system    pod/kube-controller-manager-controlplane   1/1     Running   0          100s
+kube-system    pod/kube-proxy-msrlf                       1/1     Running   0          94s
+kube-system    pod/kube-scheduler-controlplane            1/1     Running   0          100s
+
+NAMESPACE     NAME                           TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                  AGE
+app-space     service/default-http-backend   ClusterIP   172.20.188.83    <none>        80/TCP                   44s
+app-space     service/video-service          ClusterIP   172.20.49.89     <none>        8080/TCP                 44s
+app-space     service/wear-service           ClusterIP   172.20.197.128   <none>        8080/TCP                 44s
+default       service/kubernetes             ClusterIP   172.20.0.1       <none>        443/TCP                  101s
+kube-system   service/kube-dns               ClusterIP   172.20.0.10      <none>        53/UDP,53/TCP,9153/TCP   100s
+
+NAMESPACE      NAME                             DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE
+kube-flannel   daemonset.apps/kube-flannel-ds   1         1         1       1            1           <none>                   99s
+kube-system    daemonset.apps/kube-proxy        1         1         1       1            1           kubernetes.io/os=linux   100s
+
+NAMESPACE     NAME                              READY   UP-TO-DATE   AVAILABLE   AGE
+app-space     deployment.apps/default-backend   1/1     1            1           44s
+app-space     deployment.apps/webapp-video      1/1     1            1           44s
+app-space     deployment.apps/webapp-wear       1/1     1            1           44s
+kube-system   deployment.apps/coredns           2/2     2            2           100s
+
+NAMESPACE     NAME                                         DESIRED   CURRENT   READY   AGE
+app-space     replicaset.apps/default-backend-5cd488d85c   1         1         1       44s
+app-space     replicaset.apps/webapp-video-cb475db9c       1         1         1       44s
+app-space     replicaset.apps/webapp-wear-6886df6554       1         1         1       44s
+kube-system   replicaset.apps/coredns-77d6fd4654           2         2         2       94s
 ----------------------------------------------------------------------------------------------
 
-2. 
+2. Let us now deploy an Ingress Controller. First, create a namespace called ingress-nginx.
+We will isolate all ingress related objects into its own namespace.
+
+controlplane ~ ➜  kubectl create namespace ingress-nginx
+namespace/ingress-nginx created
 ----------------------------------------------------------------------------------------------
 
-3. 
+3. The NGINX Ingress Controller requires a ConfigMap object. 
+Create a ConfigMap object with name ingress-nginx-controller in the ingress-nginx namespace.
+No data needs to be configured in the ConfigMap.
+Name: ingress-nginx-controller
+
+controlplane ~ ➜  kubectl create configmap ingress-nginx-controller --namespace ingress-nginx
+configmap/ingress-nginx-controller created
 ----------------------------------------------------------------------------------------------
 
-4. 
+4. The NGINX Ingress Controller requires two ServiceAccounts. 
+Create both ServiceAccount with name "ingress-nginx" and "ingress-nginx-admission" in the ingress-nginx namespace.
+Use the spec provided below.
+Name: ingress-nginx
+Name: ingress-nginx-admission
+controlplane ~ ➜ kubectl create serviceaccount ingress-nginx -n ingress-nginx -> serviceaccount/ingress-nginx created
+controlplane ~ ➜ kubectl create sa ingress-nginx-admission -n ingress-nginx -> serviceaccount/ingress-nginx-admission created
 ----------------------------------------------------------------------------------------------
 
-5. 
+5. We have created the Roles, RoleBindings, ClusterRoles, and ClusterRoleBindings for the ServiceAccount. Check it out!!
 ----------------------------------------------------------------------------------------------
 
-6. 
+6. controlplane ~ ➜  kubectl get role -n ingress-nginx
+NAME                      CREATED AT
+ingress-nginx             2025-01-12T15:40:41Z
+ingress-nginx-admission   2025-01-12T15:40:41Z
+
+controlplane ~ ➜  kubectl get rolebindings.rbac.authorization.k8s.io -n ingress-nginx
+NAME                      ROLE                           AGE
+ingress-nginx             Role/ingress-nginx             55s
+ingress-nginx-admission   Role/ingress-nginx-admission   55s
+
+controlplane ~ ➜  kubectl get clusterrole -n ingress-nginx
+NAME                                                                   CREATED AT
+admin                                                                  2025-01-12T15:31:52Z
+cluster-admin                                                          2025-01-12T15:31:52Z
+edit                                                                   2025-01-12T15:31:52Z
+flannel                                                                2025-01-12T15:31:55Z
+ingress-nginx                                                          2025-01-12T15:40:41Z
+ingress-nginx-admission                                                2025-01-12T15:40:41Z
+kubeadm:get-nodes    
+
+controlplane ~ ➜  kubectl get clusterrolebindings.rbac.authorization.k8s.io -n ingress-nginx
+NAME                                                            ROLE                                                                               
+cluster-admin                                                   ClusterRole/cluster-admin
+flannel                                                         ClusterRole/flannel
+ingress-nginx                                                   ClusterRole/ingress-nginx
+ingress-nginx-admission                                         ClusterRole/ingress-nginx-admission
+kubeadm:cluster-admins                                          ClusterRole/cluster-admin
+kubeadm:get-nodes                                               ClusterRole/kubeadm:get-nodes
+kubeadm:kubelet-bootstrap                                       ClusterRole/system:node-bootstrapper
+kubeadm:node-autoapprove-bootstrap                              ClusterRole/system:certificates.k8s.io:certificatesigningrequests:nodeclient
+kubeadm:node-autoapprove-certificate-rotation                   ClusterRole/system:certificates.k8s.io:certificatesigningrequests:selfnodeclient
 ----------------------------------------------------------------------------------------------
 
-7. 
+7. Let us now deploy the Ingress Controller. Create the Kubernetes objects using the given file.
+The Deployment and it's service configuration is given at /root/ingress-controller.yaml. 
+There are several issues with it. Try to fix them.
+Note: Do not edit the default image provided in the given file. 
+The image validation check passes when other issues are resolved.
+
+Deployed in the correct namespace.
+Replicas: 1
+Use the right image
+Namespace: ingress-nginx
+Service name: ingress-nginx-controller
+NodePort: 30080
+
+controlplane ~ ➜  ls
+ingress-controller.yaml 
+
+controlplane ~ ✖ ls /root/
+ingress-controller.yaml
+
+Edit str #13:  "namespace: ingress-" ---> "ingress-nginx"
+Edit str #73:  "  containerPort: 80" ---> "containerPort: 80" (remove 2 spaces before str)
+Edit str #130: "name: ingress-controller" ---> "ingress-nginx-controller"
 ----------------------------------------------------------------------------------------------
 
 8. 
