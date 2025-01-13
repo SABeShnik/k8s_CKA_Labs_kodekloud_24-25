@@ -1,7 +1,175 @@
-**************************************************************************
-******* 1_Application Failure *****************************
+77% **********************************************************************
+******* 1_Application Failure ********************************************
 **************************************************************************
 -----------------------------------------------------------------------------
 
 
-1. 
+
+1. Troubleshooting Test 1: A simple 2 tier application is deployed in the "alpha" namespace. 
+It must display a green web page on success. Click on the "App" tab at the top of your terminal to view your application. 
+It is currently failed. Troubleshoot and fix the issue.
+Stick to the given architecture. Use the same names and port numbers as given in the below architecture diagram. 
+Feel free to edit, delete or recreate objects as necessary. Fix Issue
+
+controlplane ~ ➜  kubectl get service -n alpha
+NAME          TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
+mysql         ClusterIP   10.43.73.234   <none>        3306/TCP         3m47s
+web-service   NodePort    10.43.181.24   <none>        8080:30081/TCP   3m47s
+
+kubectl get service -n alpha web-service -oyaml > web.yml
+kubectl get service -n alpha mysql -oyaml > mysql.yml
+
+controlplane ~ ➜  echo "set number" >> ~/.vimrc
+controlplane ~ ➜  vi mysql.yml 
+"  9   name: mysql" change to "  9   name: mysql-service"
+
+--- MYSQL SERVICE ---
+1 apiVersion: v1
+  2 kind: Service
+  3 metadata:
+  4   name: mysql-service
+  5   namespace: alpha
+  6 spec:
+  7   clusterIP: 10.43.73.234
+  8   clusterIPs:
+  9   - 10.43.73.234
+ 10   internalTrafficPolicy: Cluster
+ 11   ipFamilies:
+ 12   - IPv4
+ 13   ipFamilyPolicy: SingleStack
+ 14   ports:
+ 15   - port: 3306
+ 16     protocol: TCP
+ 17     targetPort: 3306
+ 18   selector:
+ 19     name: mysql
+ 20   sessionAffinity: None
+ 21   type: ClusterIP
+ 22 status:
+ 23   loadBalancer: {}
+
+
+--- WEB SERVICE --- 
+1 apiVersion: v1
+  2 kind: Service
+  3 metadata:
+  4   creationTimestamp: "2025-01-13T09:16:48Z"
+  5   name: web-service
+  6   namespace: alpha
+  7   resourceVersion: "763"
+  8   uid: 196e9562-4bdf-4539-a868-2ef2210637a8
+  9 spec:
+ 10   clusterIP: 10.43.181.24
+ 11   clusterIPs:
+ 12   - 10.43.181.24
+ 13   externalTrafficPolicy: Cluster
+ 14   internalTrafficPolicy: Cluster
+ 15   ipFamilies:
+ 16   - IPv4
+ 17   ipFamilyPolicy: SingleStack
+ 18   ports:
+ 19   - nodePort: 30081
+ 20     port: 8080
+ 21     protocol: TCP
+ 22     targetPort: 8080
+ 23   selector:
+ 24     name: webapp-mysql
+ 25   sessionAffinity: None
+ 26   type: NodePort
+ 27 status:
+ 28   loadBalancer: {}
+
+
+controlplane ~ ➜  kubectl get deployments.apps -n alpha webapp-mysql -oyaml > web-msql-deploy.yml
+controlplane ~ ➜  cat web-msql-deploy.yml 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2025-01-13T09:16:48Z"
+  generation: 1
+  labels:
+    name: webapp-mysql
+  name: webapp-mysql
+  namespace: alpha
+  resourceVersion: "778"
+  uid: 8b404071-3f88-45db-8c8e-deafabe5d34c
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      name: webapp-mysql
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        name: webapp-mysql
+      name: webapp-mysql
+    spec:
+      containers:
+      - env:
+        - name: DB_Host
+          value: mysql-service
+        - name: DB_User
+          value: root
+        - name: DB_Password
+          value: paswrd
+        image: mmumshad/simple-webapp-mysql
+        imagePullPolicy: Always
+        name: webapp-mysql
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status:
+  availableReplicas: 1
+  conditions:
+  - lastTransitionTime: "2025-01-13T09:16:53Z"
+    lastUpdateTime: "2025-01-13T09:16:53Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2025-01-13T09:16:48Z"
+    lastUpdateTime: "2025-01-13T09:16:53Z"
+    message: ReplicaSet "webapp-mysql-78fd9544f6" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  observedGeneration: 1
+  readyReplicas: 1
+  replicas: 1
+  updatedReplicas: 1
+-----------------------------------------------------------------------------
+
+
+2. Troubleshooting Test 2: The same 2 tier application is deployed in the beta namespace. It must display a green web page on success. 
+Click on the App tab at the top of your terminal to view your application. It is currently failed. Troubleshoot and fix the issue.
+Stick to the given architecture. Use the same names and port numbers as given in the below architecture diagram. Feel free to edit,
+delete or recreate objects as necessary. Fix Issue
+
+
+-----------------------------------------------------------------------------
+3. 
+-----------------------------------------------------------------------------
+4. 
+-----------------------------------------------------------------------------
+5. 
+-----------------------------------------------------------------------------
+6. 
+-----------------------------------------------------------------------------
