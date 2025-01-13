@@ -1,18 +1,135 @@
 79% **********************************************************************
-******* 2_Control_Plane Failure ******************************************
+******* 2_Control_Plane_Failure ******************************************
 **************************************************************************
 -----------------------------------------------------------------------------
 
 
-1. 
+1. The cluster is broken. We tried deploying an application but it's not working. Troubleshoot and fix the issue.
+Start looking at the deployments. ---> Fix the cluster
 
+This error indicates that the Kubernetes API server is unable to reach the node. 
+This has nothing to do with your containers, pods or even your CNI network. no route to host indicates that either:
+The host is unavailable
+A network segmentation has occurred
+The Kubelet is unable to answer the API server
+
+controlplane ~ ➜  kubectl get deployments.apps 
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+app    0/1     1            0           7m37s
+
+----------------------------
+controlplane ~ ➜  kubectl describe deployments.apps app 
+Replicas:               1 desired | 1 updated | 1 total | 0 available | 1 unavailable
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      False   MinimumReplicasUnavailable
+  Progressing    True    ReplicaSetUpdated
+OldReplicaSets:  <none>
+NewReplicaSet:   app-776bb5c68f (1/1 replicas created)
+----------------------------
+
+controlplane ~ ➜  kubectl get nodes
+NAME           STATUS   ROLES           AGE   VERSION
+controlplane   Ready    control-plane   13m   v1.31.0
+
+controlplane ~ ➜  kubectl get pods --all-namespaces | grep sch
+kube-system    kube-scheduler-controlplane            0/1     CrashLoopBackOff   6 (3m44s ago)   9m37s
+
+controlplane ~ ➜  kubectl describe pods -n kube-system kube-scheduler-controlplane 
+   State:          Waiting
+      Reason:       CrashLoopBackOff
+    Last State:     Terminated
+      Reason:       StartError
+      Message:      failed to create containerd task: failed to create shim task: OCI runtime create failed: runc create failed: 
+unable to start container process: exec: "kube-schedulerrrr": executable file not found in $PATH: unknown
+
+controlplane ~ ✖ cd /etc/kubernetes/manifests/
+CHANGE this:
+  - command:
+    - kube-schedulerrrr
+ON This:
+  - command:
+    - kube-schedulerrrr
+
+controlplane /etc/kubernetes/manifests ➜  kubectl get deployments.apps 
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+app    1/1     1            1           19m
 -----------------------------------------------------------------------------------------------------
-2. 
 
+
+2. Scale the deployment app to 2 pods.
+
+controlplane /etc/kubernetes/manifests ➜  kubectl scale deployment app --replicas=2
+deployment.apps/app scaled
 -----------------------------------------------------------------------------------------------------
-3. 
 
+
+3. Even though the deployment was scaled to 2, the number of PODs does not seem to increase. Investigate and fix the issue.
+Inspect the component responsible for managing deployments and replicasets. ---> Fix issue
+
+controlplane /etc/kubernetes/manifests ➜  kubectl get deployments.apps 
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+app    1/2     1            1           21m
+
+controlplane ➜  kubectl describe deployments.apps app ---> nothing interesting
+controlplane ➜  kubectl get pods -n kube-system | grep manager
+kube-controller-manager-controlplane   0/1     CrashLoopBackOff   5 (2m23s ago)   5m36s
+
+controlplane ➜  kubectl describe pod -n kube-system kube-controller-manager-controlplane
+    State:          Waiting
+      Reason:       CrashLoopBackOff
+    Last State:     Terminated
+      Reason:       Error
+
+controlplane /etc/kubernetes/manifests ✖ kubectl logs -n kube-system kube-controller-manager-controlplane
+I0113 17:33:43.318490       1 serving.go:386] Generated self-signed cert in-memory
+E0113 17:33:43.318609       1 run.go:72] "command failed" err="stat /etc/kubernetes/controller-manager-XXXX.conf: no such file or directory"
+
+controlplane /etc/kubernetes/manifests ➜  ls /etc/kubernetes/controller-manager*.conf
+/etc/kubernetes/controller-manager.conf
+
+controlplane / ➜  vi /etc/kubernetes/manifests/kube-controller-manager.yaml 
+controlplane / ➜  echo "set number" > ~/.vimrc
+controlplane / ➜  vi /etc/kubernetes/manifests/kube-controller-manager.yaml 
+CHANGE " 24     - --kubeconfig=/etc/kubernetes/controller-manager-XXXX.conf"
+TO THIS: " 24     - --kubeconfig=/etc/kubernetes/controller-manager.conf"
+
+And wait 1 minute
 -----------------------------------------------------------------------------------------------------
-4. 
 
+
+4. Something is wrong with scaling again. We just tried scaling the deployment to 3 replicas. 
+But it's not happening. Investigate and fix the issue.
+
+controlplane / ➜  kubectl get deployments.apps app 
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+app    2/3     2            2           38m
+
+controlplane / ➜  kubectl get pods -n kube-system | grep manager
+kube-controller-manager-controlplane   0/1     CrashLoopBackOff   4 (16s ago)   2m
+    State:          Waiting
+      Reason:       CrashLoopBackOff
+    Last State:     Terminated
+      Reason:       Error
+
+controlplane / ➜  kubectl logs -n kube-system kube-controller-manager-controlplane
+I0113 17:46:05.298094       1 serving.go:386] Generated self-signed cert in-memory
+E0113 17:46:05.602771       1 run.go:72] "command failed" err="unable to load client CA provider: 
+                            open /etc/kubernetes/pki/ca.crt: no such file or directory"   <------------- ca.crt
+
+controlplane / ➜  ll /etc/kubernetes/pki/ | grep ca.
+-rw-r--r-- 1 root root 1107 Jan 13 17:02 ca.crt
+
+controlplane / ➜  vi /etc/kubernetes/manifests/kube-controller-manager.yaml 
+CHANGE This: 98       path: /etc/kubernetes/WRONG-PKI-DIRECTORY
+On This:     98       path: /etc/kubernetes/pki
+
+Wait minute and than:
+controlplane / ➜  kubectl get pods -n kube-system | grep manager
+kube-controller-manager-controlplane   1/1     Running   0          20s
+
+controlplane / ➜  kubectl get deployments.apps app 
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+app    3/3     3            3           50m
 -----------------------------------------------------------------------------------------------------
