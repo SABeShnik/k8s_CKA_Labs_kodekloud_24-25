@@ -274,5 +274,131 @@ Inspect the ports used by the web-service is it correct? Are the environment var
 controlplane ~ ➜  kubectl get deployments.apps --all-namespaces  | grep zeta
 zeta          webapp-mysql             1/1     1            1           17s
 
+controlplane ~ ➜  kubectl get service -n zeta
+NAME            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+mysql-service   ClusterIP   10.43.124.206   <none>        3306/TCP         3m34s
+web-service     NodePort    10.43.242.238   <none>        8080:30088/TCP   3m34s  <----- Wrong port
+
+controlplane ~ ➜  kubectl get pods --all-namespaces | grep zeta
+zeta          mysql                                     1/1     Running     0          4m58s
+zeta          webapp-mysql-b9c9f7fbd-rnn29              1/1     Running     0          4m58s
+
+controlplane ~ ➜  kubectl describe pods -n zeta mysql 
+Name:             mysql
+Namespace:        zeta
+Priority:         0
+Service Account:  default
+Node:             controlplane/192.168.42.149
+Start Time:       Mon, 13 Jan 2025 11:12:00 +0000
+Labels:           name=mysql
+Annotations:      <none>
+Status:           Running
+IP:               10.42.0.25
+IPs:
+  IP:  10.42.0.25
+Containers:
+  mysql:
+    Container ID:   containerd://ce67b1740ee0960685e651a3a24c57987b40edfffdba1587e880c0d8d300b971
+    Image:          mysql:5.6
+    Image ID:       docker.io/library/mysql@sha256:20575ecebe6216036d25dab5903808211f1e9ba63dc7825ac20cb975e34cfcae
+    Port:           3306/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Mon, 13 Jan 2025 11:12:00 +0000
+    Ready:          True
+    Restart Count:  0
+    Environment:
+      MYSQL_ROOT_PASSWORD:  passwooooorrddd
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-f4hpx (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       True 
+  ContainersReady             True 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-f4hpx:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason     Age    From               Message
+  ----    ------     ----   ----               -------
+  Normal  Scheduled  5m56s  default-scheduler  Successfully assigned zeta/mysql to controlplane
+  Normal  Pulled     5m56s  kubelet            Container image "mysql:5.6" already present on machine
+  Normal  Created    5m56s  kubelet            Created container mysql
+  Normal  Started    5m56s  kubelet            Started container mysql
+
+
+
+
+
+controlplane ~ ➜  kubectl describe pods -n zeta webapp-mysql-b9c9f7fbd-rnn29 
+Name:             webapp-mysql-b9c9f7fbd-rnn29
+Namespace:        zeta
+Priority:         0
+Service Account:  default
+Node:             controlplane/192.168.42.149
+Start Time:       Mon, 13 Jan 2025 11:12:00 +0000
+Labels:           name=webapp-mysql
+                  pod-template-hash=b9c9f7fbd
+Annotations:      <none>
+Status:           Running
+IP:               10.42.0.26
+IPs:
+  IP:           10.42.0.26
+Controlled By:  ReplicaSet/webapp-mysql-b9c9f7fbd
+Containers:
+  webapp-mysql:
+    Container ID:   containerd://1736b4f68fb836ba36b2815cf9270be28a15d4170f13389aaab501e3206e039a
+    Image:          mmumshad/simple-webapp-mysql
+    Image ID:       docker.io/mmumshad/simple-webapp-mysql@sha256:d4d0c03fcb76cee6ae2511fa7f3f6b7090f0c5e0cb3f276687f9ddf2c689cc09
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Mon, 13 Jan 2025 11:12:01 +0000
+    Ready:          True
+    Restart Count:  0
+    Environment:
+      DB_Host:      mysql-service
+      DB_User:      sql-user
+      DB_Password:  paswrd
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-mmc5w (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       True 
+  ContainersReady             True 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-mmc5w:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason     Age    From               Message
+  ----    ------     ----   ----               -------
+  Normal  Scheduled  6m17s  default-scheduler  Successfully assigned zeta/webapp-mysql-b9c9f7fbd-rnn29 to controlplane
+  Normal  Pulling    6m17s  kubelet            Pulling image "mmumshad/simple-webapp-mysql"
+  Normal  Pulled     6m17s  kubelet            Successfully pulled image "mmumshad/simple-webapp-mysql" in 148ms (148ms including waiting). Image size: 36428415 bytes.
+  Normal  Created    6m17s  kubelet            Created container webapp-mysql
+  Normal  Started    6m16s  kubelet            Started container webapp-mysql
+
 
 -----------------------------------------------------------------------------
