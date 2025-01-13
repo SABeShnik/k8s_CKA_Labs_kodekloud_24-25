@@ -1,0 +1,158 @@
+80% **********************************************************************
+******* 3_Worker_Node_Failure ********************************************
+**************************************************************************
+-----------------------------------------------------------------------------
+
+
+
+1. Fix the broken cluster. Fix node01
+controlplane ~ ➜  kubectl get nodes
+NAME           STATUS     ROLES           AGE     VERSION
+controlplane   Ready      control-plane   4m34s   v1.31.0
+node01         NotReady   <none>          4m5s    v1.31.0
+
+controlplane ~ ➜  kubectl get nodes
+NAME           STATUS     ROLES           AGE     VERSION
+controlplane   Ready      control-plane   4m34s   v1.31.0
+node01         NotReady   <none>          4m5s    v1.31.0
+
+controlplane ~ ✖ kubectl describe nodes node01 
+Warning  InvalidDiskCapacity      6m27s                  kubelet          invalid capacity 0 on image filesystem
+
+ssh node01
+
+--- HINT ---
+Step1. Check the status of services on the nodes.
+node01 ~ ✖ systemctl status kubelet
+○ kubelet.service - kubelet: The Kubernetes Node Agent
+     Loaded: loaded (/lib/systemd/system/kubelet.service; enabled; vendor preset: enabled)
+    Drop-In: /usr/lib/systemd/system/kubelet.service.d
+             └─10-kubeadm.conf
+     Active: inactive (dead) since Mon 2025-01-13 18:00:39 UTC; 6min ago
+   
+Step2. Check the service logs using journalctl -u kubelet. ---> err="failed to load kubelet config file, path: /var/lib/kubelet/config.yaml  
+
+Step3. If it's stopped then start the stopped services.
+Alternatively, run the command:
+ssh node01 "service kubelet start"
+node01 ~ ➜  systemctl start kubelet
+node01 ~ ➜  systemctl status kubelet
+● kubelet.service - kubelet: The Kubernetes Node Agent
+     Loaded: loaded (/lib/systemd/system/kubelet.service; enabled; vendor preset: enabled)
+    Drop-In: /usr/lib/systemd/system/kubelet.service.d
+             └─10-kubeadm.conf
+     Active: active (running) since Mon 2025-01-13 18:10:29 UTC; 4s ago
+--------------------------------------------------------------------------------
+
+
+2. The cluster is broken again. Investigate and fix the issue. ---> Fix cluster
+controlplane ~ ✖ kubectl get nodes
+NAME           STATUS     ROLES           AGE   VERSION
+controlplane   Ready      control-plane   17m   v1.31.0
+node01         NotReady   <none>          16m   v1.31.0
+
+ssh node01
+node01 ~ ✖ systemctl status kubelet
+● kubelet.service - kubelet: The Kubernetes Node Agent
+     Loaded: loaded (/lib/systemd/system/kubelet.service; enabled; vendor preset: enabled)
+    Drop-In: /usr/lib/systemd/system/kubelet.service.d
+             └─10-kubeadm.conf
+     Active: activating (auto-restart)
+
+     node01 ~ ➜  ls /etc/kubernetes/manifests/ ===> Empty
+     node01 ~ ➜  vi /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf 
+( /var/lib/kubelet/config.yaml /etc/default/kubelet ) /var/lib/kubelet/config.yaml <------------------------ "WRONG-CA-FILE.crt"
+CHANGE "9     clientCAFile: /etc/kubernetes/pki/WRONG-CA-FILE.crt" on "9     clientCAFile: /etc/kubernetes/pki/ca.crt"
+--- OR ---
+Inspect the logs using journalctl -u kubelet -f. Fix the issue in the file.
+err="failed to construct kubelet dependencies: unable to load client CA file /etc/kubernetes/pki/WRONG-CA-FILE.crt
+
+AND
+
+node01 ~ ✖ journalctl -u kubelet -f
+Jan 13 18:23:16 node01 kubelet[16053]: I0113 18:23:16.787874   16053 container_log_manager.go:189] "Initializing container log rotate workers" workers=1 monitorPeriod="10s"
+Jan 13 18:23:16 node01 kubelet[16053]: I0113 18:23:16.787976   16053 kuberuntime_manager.go:1633] "Updating runtime config through cri with podcidr" CIDR="172.17.1.0/24"
+Jan 13 18:23:16 node01 kubelet[16053]: I0113 18:23:16.788060   16053 plugin_manager.go:118] "Starting Kubelet Plugin Manager"
+Jan 13 18:23:16 node01 kubelet[16053]: I0113 18:23:16.788439   16053 kubelet_network.go:61] "Updating Pod CIDR" originalPodCIDR="" newPodCIDR="172.17.1.0/24"
+Jan 13 18:23:16 node01 kubelet[16053]: I0113 18:23:16.789044   16053 kubelet_node_status.go:488] "Fast updating node status as it just became ready"
+Jan 13 18:23:16 node01 kubelet[16053]: I0113 18:23:16.948886   16053 kubelet_node_status.go:72] "Attempting to register node" node="node01"
+Jan 13 18:23:16 node01 kubelet[16053]: I0113 18:23:16.954472   16053 kubelet_node_status.go:111] "Node was previously registered" node="node01"
+Jan 13 18:23:16 node01 kubelet[16053]: I0113 18:23:16.954561   16053 kubelet_node_status.go:75] "Successfully registered node" node="node01"
+Jan 13 18:23:17 node01 kubelet[16053]: I0113 18:23:17.668483   16053 apiserver.go:52] "Watching apiserver"
+Jan 13 18:23:17 node01 kubelet[16053]: I0113 18:23:17.680442   16053 desired_state_of_world_populator.go:154] "Finished populating initial desired state of world"
+-------------------------------------------------------------------------------------------------------------------
+
+
+3. The cluster is broken again. Investigate and fix the issue. ---> Fix Cluster
+
+controlplane ~ ➜  kubectl get nodes
+NAME           STATUS     ROLES           AGE   VERSION
+controlplane   Ready      control-plane   30m   v1.31.0
+node01         NotReady   <none>          29m   v1.31.0
+
+node01 ~ ✖ systemctl status kubelet
+● kubelet.service - kubelet: The Kubernetes Node Agent
+     Loaded: loaded (/lib/systemd/system/kubelet.service; enabled; vendor preset: enabled)
+    Drop-In: /usr/lib/systemd/system/kubelet.service.d
+             └─10-kubeadm.conf
+     Active: active (running) since Mon 2025-01-13 18:26:01 UTC; 1min 26s ago
+       Docs: https://kubernetes.io/docs/
+   Main PID: 17323 (kubelet)
+      Tasks: 23 (limit: 77143)
+     Memory: 26.6M
+     CGroup: /system.slice/kubelet.service
+             └─17323 /usr/bin/kubelet --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/k
+
+controlplane ~ ➜  kubectl describe nodes node01 
+NodeStatusUnknown   Kubelet stopped posting node status.
+
+ssh node01
+node01 ~ ✖ sudo systemctl restart kubelet
+
+ Normal   NodeReady                19m                    kubelet          Node node01 status is now: NodeReady
+  Normal   Starting                 19m                    kubelet          Starting kubelet.
+  Warning  InvalidDiskCapacity      19m                    kubelet          invalid capacity 0 on image filesystem
+  Normal   NodeAllocatableEnforced  19m                    kubelet          Updated Node Allocatable limit across pods
+  Normal   NodeHasSufficientMemory  19m (x2 over 19m)      kubelet          Node node01 status is now: NodeHasSufficientMemory
+  Normal   NodeHasNoDiskPressure    19m (x2 over 19m)      kubelet          Node node01 status is now: NodeHasNoDiskPressure
+  Normal   NodeHasSufficientPID     19m (x2 over 19m)      kubelet          Node node01 status is now: NodeHasSufficientPID
+  Normal   Starting                 6m58s                  kubelet          Starting kubelet.
+  Warning  CgroupV1                 6m58s                  kubelet          Cgroup v1 support is in maintenance mode, please migrate to Cgroup v2.
+
+
+controlplane ~ ✖ journalctl -u kubelet -f
+Failed to get disk map: could not parse device numbers from  for device md127
+
+controlplane ~ ✖ lsblk
+lsblk: /proc/swaps: parse error at line 1 -- ignored
+NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+sda       8:0    0   20G  0 disk 
+├─sda1    8:1    0 19.9G  0 part /usr/lib/modules/5.15.0-1071-gcp
+│                                /usr/src/linux-gcp-5.15-headers-5.15.0-1071
+│                                /usr/src/linux-headers-5.15.0-1071-gcp
+│                                /etc/hosts
+│                                /tmp
+│                                /dev/termination-log
+├─sda14   8:14   0    4M  0 part 
+└─sda15   8:15   0  106M  0 part 
+nvme0n1 259:0    0  375G  0 disk 
+nvme0n2 259:1    0  375G  0 disk 
+
+---HINT---
+Check the kubelet.conf file at /etc/kubernetes/kubelet.conf.
+controlplane ~ ✖ vi /etc/kubernetes/kubelet.conf
+
+controlplane ~ ➜  ls -l /etc/kubernetes/kubelet.conf
+
+ssh node01
+node01 ~ ✖ journalctl -u kubelet 
+"Attempting to sync node with API server"
+
+reflector.go:148] vendor/k8s.io/client-go/informers/factory.go:150: Failed to watch *v1.Node: failed to list *v1.Node: 
+Get "https://controlplane:6553/api/v1/nodes?fieldSelector=metadata.name%3Dnode01&limit=500&resourceVersion=0": 
+dial tcp 192.168.28.57:6553: connect: connection refused
+
+node01 ~ ✖ vi /etc/kubernetes/kubelet.conf
+CHANGE "server: https://controlplane:6553" on "server: https://controlplane:6443"
+node01 ~ ➜  sudo systemctl restart kubelet
+-------------------------------------------------------------------------------------------------------------------
