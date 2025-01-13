@@ -5,7 +5,8 @@
 
 
 
-1. Troubleshooting Test 1: A simple 2 tier application is deployed in the "alpha" namespace. 
+1. Troubleshooting Test 1: 
+A simple 2 tier application is deployed in the "alpha" namespace. 
 It must display a green web page on success. Click on the "App" tab at the top of your terminal to view your application. 
 It is currently failed. Troubleshoot and fix the issue.
 Stick to the given architecture. Use the same names and port numbers as given in the below architecture diagram. 
@@ -155,21 +156,123 @@ status:
   readyReplicas: 1
   replicas: 1
   updatedReplicas: 1
------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------
 
 
-2. Troubleshooting Test 2: The same 2 tier application is deployed in the beta namespace. It must display a green web page on success. 
+
+2. Troubleshooting Test 2 (the same schema): 
+The same 2 tier application is deployed in the beta namespace. It must display a green web page on success. 
 Click on the App tab at the top of your terminal to view your application. It is currently failed. Troubleshoot and fix the issue.
 Stick to the given architecture. Use the same names and port numbers as given in the below architecture diagram. Feel free to edit,
 delete or recreate objects as necessary. Fix Issue
 
+controlplane ~ ✖ kubectl get deployments.apps --all-namespaces 
+NAMESPACE     NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+beta          webapp-mysql             1/1     1            1           3m14s
 
------------------------------------------------------------------------------
-3. 
------------------------------------------------------------------------------
-4. 
------------------------------------------------------------------------------
-5. 
------------------------------------------------------------------------------
-6. 
+controlplane ~ ➜  kubectl get service --all-namespaces 
+NAMESPACE     NAME             TYPE           CLUSTER-IP     EXTERNAL-IP       PORT(S)    
+beta          mysql-service    ClusterIP      10.43.152.28   <none>            3306/TCP     
+beta          web-service      NodePort       10.43.7.33     <none>            8080:30081/TCP
+
+controlplane ~ ➜  kubectl edit service -n beta mysql-service 
+"24     targetPort: 8080" change to " 24     targetPort: 3306"
+service/mysql-service edited
+----------------------------------------------------------------------------------------------------------------------
+
+
+3. Troubleshooting Test 3: 
+The same 2 tier application is deployed in the "gamma" namespace. It must display a green web page on success. 
+Click on the "App" tab at the top of your terminal to view your application. It is currently failed or unresponsive. 
+Troubleshoot and fix the issue. Stick to the given architecture. 
+Use the same names and port numbers as given in the below architecture diagram. 
+Feel free to edit, delete or recreate objects as necessary. Fix Issue
+
+controlplane ~ ➜  kubectl get deployments.apps --all-namespaces 
+NAMESPACE     NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+gamma         webapp-mysql             1/1     1            1           64s
+
+controlplane ~ ➜  kubectl edit service -n gamma mysql-service
+"26     name: sql00001" change to " 26     name: mysql"
+----------------------------------------------------------------------------------------------------------------------
+
+
+4. Troubleshooting Test 4: - New diagram (add user data)
+The same 2 tier application is deployed in the "delta" namespace. It must display a green web page on success. 
+Click on the "App" tab at the top of your terminal to view your application. It is currently failed. Troubleshoot and fix the issue.
+Stick to the given architecture. Use the same names and port numbers as given in the below architecture diagram. 
+Feel free to edit, delete or recreate objects as necessary. Fix Issue
+
+controlplane ~ ➜  kubectl get service -n delta 
+NAME            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+mysql-service   ClusterIP   10.43.50.140    <none>        3306/TCP         111s
+web-service     NodePort    10.43.241.122   <none>        8080:30081/TCP   111s
+
+controlplane ~ ➜  echo "set number" >> ~/.vimrc 
+controlplane ~ ➜  kubectl edit deployments.apps -n delta webapp-mysql 
+Change " 42           value: sql-user" to " 42           value: root"
+deployment.apps/webapp-mysql edited
+----------------------------------------------------------------------------------------------------------------------
+
+
+5. Troubleshooting Test 5: 
+The same 2 tier application is deployed in the "epsilon" namespace. It must display a green web page on success. 
+Click on the "App" tab at the top of your terminal to view your application. It is currently failed. Troubleshoot and fix the issue.
+Stick to the given architecture. Use the same names and port numbers as given in the below architecture diagram. 
+Feel free to edit, delete or recreate objects as necessary. Fix Issue + Fix Issue
+
+controlplane ~ ✖ kubectl get deployments.apps --all-namespaces 
+NAMESPACE     NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+epsilon       webapp-mysql             1/1     1            1           75s
+
+controlplane ~ ➜  echo "set number" >> ~/.vimrc 
+controlplane ~ ➜  kubectl edit deployments.apps -n epsilon webapp-mysql 
+Change " 42           value: sql-user" to " 42           value: root"
+deployment.apps/webapp-mysql edited
+
+controlplane ~ ➜  kubectl get pods -n epsilon 
+NAME                            READY   STATUS    RESTARTS   AGE
+mysql                           1/1     Running   0          9m
+webapp-mysql-78fd9544f6-2bc9c   1/1     Running   0          67s
+
+root@controlplane:~# kubectl -n epsilon describe pod mysql  | grep MYSQL_ROOT_PASSWORD 
+      MYSQL_ROOT_PASSWORD:  passwooooorrddd
+root@controlplane:~#
+
+ 18     - name: MYSQL_ROOT_PASSWORD ---> DB_PASSWORD
+
+controlplane ~ ➜  kubectl edit pod -n epsilon mysql
+" 19       value: passwooooorrddd" to " 19       value:paswrd"
+kubectl get pods -n epsilon mysql -oyaml > mysqlpod.yml
+controlplane ~ ✖ kubectl create -f mysqlpod.yml 
+pod/mysql created
+--- or ---
+controlplane ~ ➜  kubectl delete pods -n epsilon mysql ---> pod "mysql" deleted
+controlplane ~ ➜  vi mysqlpod.yml ---> chanage " 19       value: passwooooorrddd" to " 19       value:paswrd"
+controlplane ~ ➜  kubectl create -f mysqlpod.yml ---> pod/mysql created
+
+right block:
+ 13   - env:
+ 14     - name: DB_Host
+ 15       value: mysql-service
+ 16     - name: DB_User
+ 17       value: root
+ 18     - name: DB_PASSWORD
+ 19       value: paswrd
+
+----------------------------------------------------------------------------------------------------------------------
+
+
+6. Troubleshooting Test 6: The same 2 tier application is deployed in the zeta namespace. It must display a green web page on success. 
+Click on the App tab at the top of your terminal to view your application. It is currently failed. Troubleshoot and fix the issue.
+Stick to the given architecture. Use the same names and port numbers as given in the below architecture diagram. 
+Feel free to edit, delete or recreate objects as necessary. Fix Issue + Fix Issue + Fix Issue
+
+--- HINT ---
+Inspect the ports used by the web-service is it correct? Are the environment variable used as per the architecture diagram?
+
+controlplane ~ ➜  kubectl get deployments.apps --all-namespaces  | grep zeta
+zeta          webapp-mysql             1/1     1            1           17s
+
+
 -----------------------------------------------------------------------------
