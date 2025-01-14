@@ -182,4 +182,21 @@ root@controlplane ~ ➜  kubectl get daemonsets.apps -n kube-system
 NAME         DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE
 kube-proxy   1         1         0       1            0           kubernetes.io/os=linux   35m
 weave-net    1         1         1       1            1           <none>                   31m
+
+
+root@controlplane ~ ➜  kubectl get pod -n kube-system kube-proxy-9sj2d -oyaml > kproxy-pod.yml
+root@controlplane ~ ✖ kubectl delete pod -n kube-system kube-proxy-mvqlt 
+vi kproxy-pod.yml ---> change "- --config=/var/lib/kube-proxy/configuration.conf" ---to--- "- --config=/var/lib/kube-proxy/config.conf"
+root@controlplane ~ ➜  kubectl create -f kproxy-pod.yml  ---> pod/kube-proxy-9sj2d created
+root@controlplane ~ ➜  kubectl get pod -n kube-system | grep kube-proxy
+kube-proxy-cb26q                       0/1     CrashLoopBackOff   5 (104s ago)
+
+
+--- HINT ---
+There seems to be an issue with the Service Proxy. Inspect and Fix the kube-proxy daemonset.
+Check logs of the kube-proxy pod. It appears that the daemonset is using a wrong configuration file.
+Compare the configuration file used in the daemonset with the configmap for kube-proxy.
+Edit the kube-proxy daemonset to correct the configuration file using kubectl -n kube-system edit ds kube-proxy.
+
+
 ----------------------------------------------------------------------------------------------------------------------------
