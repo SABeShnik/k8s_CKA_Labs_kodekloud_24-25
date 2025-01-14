@@ -199,4 +199,13 @@ Compare the configuration file used in the daemonset with the configmap for kube
 Edit the kube-proxy daemonset to correct the configuration file using kubectl -n kube-system edit ds kube-proxy.
 
 
+root@controlplane ~ ➜  kubectl get daemonsets.apps -n kube-system 
+NAME         DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE
+kube-proxy   1         1         0       1            0           kubernetes.io/os=linux   24s
+
+# root@controlplane ~ ✖ kubectl get pods -n kube-system kube-proxy-srhwn -oyaml > kPrPod.yml
+root@controlplane ~ ➜  kubectl get daemonsets.apps -n kube-system kube-proxy -oyaml > ds.yml
+Change "configuration.conf" to "config.conf" ---> delete DS, create DS
+
+
 ----------------------------------------------------------------------------------------------------------------------------
