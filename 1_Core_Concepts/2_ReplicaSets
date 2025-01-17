@@ -1,4 +1,13 @@
- 1  kubectl get pod
+**************************************************************************
+******* 2_ReplicaSets ****************************************************
+**************************************************************************
+-----------------------------------------------------------------------------
+controlplane ~ ✖ echo "set number" >> ~/.vimrc
+
+
+
+
+1  kubectl get pod
     2  kubectl get replicasets.apps 
     3  kubectl get replicasets.apps 
     6  kubectl describe replicasets.apps new-replica-set
