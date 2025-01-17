@@ -19,9 +19,20 @@ new-replica-set   4         4         0       25s ---> 1
 controlplane ~ ✖ kubectl describe rs new-replica-set | grep -i image ---> Image: busybox777
 -----------------------------------------------------------------------------------------
 
-6. 
+6. How many PODs are READY in the new-replica-set? ---> 0
 -----------------------------------------------------------------------------------------
+
+7. Why do you think the PODs are not ready?
+controlplane ~ ➜  kubectl describe pods new-replica-set-kt8g7
+    State:          Waiting
+      Reason:       ErrImagePull
+    Ready:          False
+Failed to pull image "busybox777": failed to pull and unpack image "docker.io/library/busybox777:latest": 
+failed to resolve reference "docker.io/library/busybox777:latest": pull access denied, repository does not 
+exist or may require authorization: server message: insufficient_scope: authorization failed
 -----------------------------------------------------------------------------------------
+
+8. 
 -----------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------
