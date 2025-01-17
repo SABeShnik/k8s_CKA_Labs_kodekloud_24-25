@@ -116,6 +116,14 @@ new-replica-set-8tmqb   1/1     Running   0          4s
 new-replica-set-bq8ms   1/1     Running   0          5s
 new-replica-set-pthkx   1/1     Running   0          5s
 new-replica-set-vmzlr   1/1     Running   0          5s
+
+DETELE POD:
+Delete Pods which contain the word "application", replace <NS> with the namespace you want to delete pods from.
+kubectl get pods -n <NS> --no-headers=true | awk '/application/{print $1}'| xargs  kubectl delete -n <NS> pod
+---or---
+kubectl get pods --no-headers=true | awk '{print $1}' | grep new-replica-set- |  xargs kubectl delete pod
+---or---
+kubectl delete pods -l app=my-app -n default
 -----------------------------------------------------------------------------------------
 
 15. Scale the ReplicaSet to 5 PODs.
