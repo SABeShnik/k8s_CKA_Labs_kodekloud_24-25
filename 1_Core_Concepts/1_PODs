@@ -32,9 +32,19 @@ failed to resolve reference "docker.io/library/busybox777:latest": pull access d
 exist or may require authorization: server message: insufficient_scope: authorization failed
 -----------------------------------------------------------------------------------------
 
-8. 
+8. Delete any one of the 4 PODs. ---> kubectl delete pod new-replica-set-kt8g7
+---> pod "new-replica-set-kt8g7" deleted
 -----------------------------------------------------------------------------------------
+
+9. How many PODs exist now? ---> kubectl get pods ---> 4
+NAME                    READY   STATUS             RESTARTS   AGE
+new-replica-set-mxwrr   0/1     ImagePullBackOff   0          9m53s
+new-replica-set-pc6lf   0/1     ImagePullBackOff   0          9m53s
+new-replica-set-s79zg   0/1     ImagePullBackOff   0          82s
+new-replica-set-v9mgq   0/1     ImagePullBackOff   0          9m53s
 -----------------------------------------------------------------------------------------
+
+10. 
 -----------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------
