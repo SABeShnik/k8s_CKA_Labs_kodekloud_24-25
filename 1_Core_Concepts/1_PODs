@@ -2,11 +2,24 @@
 controlplane ~ ➜  kubectl get pods ---> No resources found in default namespace. ---> 0
 -----------------------------------------------------------------------------------------
 
-2.  How many ReplicaSets exist on the system? In the current(default) namespace.---> 
+2.  How many ReplicaSets exist on the system? In the current(default) namespace.
+controlplane ~ ➜  kubectl get rs No resources found in default namespace. ---> 0
 -----------------------------------------------------------------------------------------
+
+3. How about now? How many ReplicaSets do you see? We just made a few changes!
+controlplane ~ ➜  kubectl get rs
+NAME              DESIRED   CURRENT   READY   AGE
+new-replica-set   4         4         0       25s ---> 1
 -----------------------------------------------------------------------------------------
+
+4. How many PODs are DESIRED in the new-replica-set? ---> 4
 -----------------------------------------------------------------------------------------
+
+5. What is the image used to create the pods in the new-replica-set?
+controlplane ~ ✖ kubectl describe rs new-replica-set | grep -i image ---> Image: busybox777
 -----------------------------------------------------------------------------------------
+
+6. 
 -----------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------
