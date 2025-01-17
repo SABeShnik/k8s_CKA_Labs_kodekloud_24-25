@@ -79,7 +79,8 @@ controlplane ~ ➜  kubectl create -f /root/replicaset-definition-2.yaml
 The ReplicaSet "replicaset-2" is invalid: spec.template.metadata.labels: Invalid value: 
 map[string]string{"tier":"nginx"}: `selector` does not match template `labels`
 
-
+The values for labels on lines 9 and 13 should match.
+  "9       tier: frontend" ---to---   "9       tier: nginx"
 -----------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------
