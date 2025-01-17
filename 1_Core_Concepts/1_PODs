@@ -91,14 +91,55 @@ replicaset.apps "replicaset-1" deleted
 replicaset.apps "replicaset-2" deleted
 -----------------------------------------------------------------------------------------
 
-14. Fix the original replica set new-replica-set to use the correct busybox image.
+14. Fix the original replica set "new-replica-set" to use the correct busybox image.
 Either delete and recreate the ReplicaSet or Update the existing ReplicaSet and 
 then delete all PODs, so new ones with the correct image will be created.
 
+controlplane ~ ➜  kubectl edit rs new-replica-set 
+" 30         image: busybox777" ---to--- " 30         image: busybox" ---> 
+replicaset.apps/new-replica-set edited
+-----------------------------------------------------------------------------------------
 
+15. Fix the original replica set new-replica-set to use the correct busybox image.
+Either delete and recreate the ReplicaSet or Update the existing ReplicaSet and then delete all PODs, so new ones with the correct image will be created.
+
+controlplane ~ ➜  kubectl get pods --no-headers=true | awk '{print $1}' | grep new-replica-set- |  xargs kubectl delete pod
+pod "new-replica-set-mxwrr" deleted
+pod "new-replica-set-pc6lf" deleted
+pod "new-replica-set-s79zg" deleted
+pod "new-replica-set-v9mgq" deleted
+
+controlplane ~ ➜  kubectl get pods
+NAME                    READY   STATUS    RESTARTS   AGE
+new-replica-set-8tmqb   1/1     Running   0          4s
+new-replica-set-bq8ms   1/1     Running   0          5s
+new-replica-set-pthkx   1/1     Running   0          5s
+new-replica-set-vmzlr   1/1     Running   0          5s
 -----------------------------------------------------------------------------------------
+
+15. Scale the ReplicaSet to 5 PODs.
+Use kubectl scale command or edit the replicaset using kubectl edit replicaset.
+controlplane ~ ➜  kubectl scale rs new-replica-set --replicas 5        ---or --- --replicas=5
+replicaset.apps/new-replica-set scaled --- or --- kubectl edit replicaset new-replica-set
 -----------------------------------------------------------------------------------------
+
+16. Now scale the ReplicaSet down to 2 PODs.
+Use the kubectl scale command or edit the replicaset using kubectl edit replicaset.
+controlplane ~ ➜  kubectl scale rs new-replica-set --replicas 2 ---> replicaset.apps/new-replica-set scaled
 -----------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 kubectl run --image=nginx nginx
 
