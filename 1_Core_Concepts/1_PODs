@@ -44,8 +44,24 @@ new-replica-set-s79zg   0/1     ImagePullBackOff   0          82s
 new-replica-set-v9mgq   0/1     ImagePullBackOff   0          9m53s
 -----------------------------------------------------------------------------------------
 
-10. 
+10. Why are there still 4 PODs, even after you deleted one?
+ReplicaSet ensures that desired number of PODs always run <--- Answer
 -----------------------------------------------------------------------------------------
+
+11. Create a ReplicaSet using the replicaset-definition-1.yaml file located at /root/.
+There is an issue with the file, so try to fix it. ---> kubectl create -f /root/replicaset-definition-1.yaml
+error: resource mapping not found for name: "replicaset-1" namespace: "" 
+from "/root/replicaset-definition-1.yaml": no matches for kind "ReplicaSet" in version "v1"
+ensure CRDs are installed firs
+
+controlplane ~ ✖ echo "set number" >> ~/.vimrc
+controlplane ~ ➜  vim /root/replicaset-definition-1.yaml
+CHANGE "1 apiVersion: v1" ---to--- "  1 apiVersion: apps/v1"
+And try again: controlplane ~ ✖ kubectl create -f /root/replicaset-definition-1.yaml
+replicaset.apps/replicaset-1 created
+info
+controlplane ~ ➜  kubectl api-resources | grep replicaset
+replicasets    rs     apps/v1    true    ReplicaSet
 -----------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------
