@@ -169,7 +169,7 @@ IPs:                      10.109.62.253
 
 
 
-2. **Troubleshooting Test 2:** 
+2. **Troubleshooting Test 2:** (---- kube-proxy-8xt72    0/1     Error    ---)
 The same 2 tier application is having issues again. It must display a green web page on success. 
 Click on the app tab at the top of your terminal to view your application. It is currently failed. Troubleshoot and fix the issue.
 Stick to the given architecture. Use the same names and port numbers as given in the below architecture diagram. 
