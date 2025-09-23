@@ -1,0 +1,59 @@
+1. You must have Kubernetes installed for a successful and properly secured use of Helm.
+Refer the documentation to check the prerequisites. The Documentation tab is available at the top right panel.
+A = True
+
+2. Install the helm package on the controlplane node.
+If unsure how to install the helm tool, feel free to refer to the documentation. The Documentation tab is available at the top right panel.
+Note: Make sure to complete the installation process before moving to the next questions.
+
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+$ chmod 700 get_helm.sh
+$ ./get_helm.sh
+
+3. Awesome 💪!! Now that you have Helm installed ✨ identify the Helm version in the cluster.
+controlplane ~ ✖ helm version
+version.BuildInfo{Version:"v3.19.0", GitCommit:"3d8990f0836691f0229297773f3524598f46bda6", GitTreeState:"clean", GoVersion:"go1.24.7"}
+A = v3.19.0
+
+4. Which environment variable can be used to indicate whether or not Helm is running in Debug mode?
+Use the help mode of the helm command to look for this information.
+Environment variables:
+
+A = Run the command: helm --help and check under Environment variables section.
+| Name                               | Description                                                                                                |
+|------------------------------------|------------------------------------------------------------------------------------------------------------|
+| $HELM_CACHE_HOME                   | set an alternative location for storing cached files.                                                      |
+| $HELM_CONFIG_HOME                  | set an alternative location for storing Helm configuration.                                                |
+| $HELM_DATA_HOME                    | set an alternative location for storing Helm data.                                                         |
+| $HELM_DEBUG                        | indicate whether or not Helm is running in Debug mode                                                      |
+
+5. What is a command line flag that can be used to enable verbose output?
+Flags:
+      --burst-limit int                 client-side default throttling limit (default 100)
+      --debug                           enable verbose output
+A = --debug 
+
+
+6. Which of the following is not a valid subcommand to use with helm get command?
+valuse
+hooks
+notes
+manifest 
+output   <---------------------
+
+controlplane ~ ➜  helm get --help
+Usage:
+  helm get [command]
+Available Commands:
+  all         download all information for a named release
+  hooks       download all hooks for a named release
+  manifest    download the manifest for a named release
+  metadata    This command fetches metadata for a given release
+  notes       download the notes for a named release
+  values      download the values file for a named release
+
+A = output
+
+
+7. That's all for now. That was a quick introduction to the helm command line utility. Feel free to explore the helm command line utility further. We will learn more about these commands throughout the remainder of this course.
+
