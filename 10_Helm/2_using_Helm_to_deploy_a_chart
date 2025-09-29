@@ -1,1 +1,162 @@
+1. The helm package that contains all of the resource definitions necessary to run an application, 
+tool, or service inside of a Kubernetes cluster is known as a …
+-chart <--- 
+-map
+-list
+-brew
+Hint: A Chart is a Helm package. It contains all of the resource definitions necessary to run an application, 
+tool, or service inside of a Kubernetes cluster.
 
+
+2. We cannot install the same chart multiple times on the same Kubernetes Cluster.
+-true
+-false <---
+
+
+3. Which command is used to search for a wordpress helm chart package from the Artifact Hub?
+-helm search hub wordpress <---
+-helm find wordpress
+-helm find hub wordpress
+-helm list wordpress
+-helm search wordpress
+
+controlplane ~ ➜  helm search 
+Search provides the ability to search for Helm charts in the various places
+they can be stored including the Artifact Hub and repositories you have added.
+Use search subcommands to search different locations for charts.
+Usage:
+  helm search [command]
+Available Commands:
+  hub         search for charts in the Artifact Hub or your own hub instance
+  repo        search repositories for a keyword in charts
+
+Hint: Run helm search hub chart-name command to search specific charts on Artifact Hub.
+Note: Replace the chart-name with the necessary package.
+
+
+4. Search for a consul helm chart package from the Artifact Hub and identify the APP VERSION for the Official HashiCorp Consul Chart.
+-1.21.4 <---
+-1.10.2
+-0.36.0
+-1.9.0
+controlplane ~ ➜  helm search hub consul | grep hashi
+https://artifacthub.io/packages/helm/hashicorp/...      1.8.1           1.21.4          Official HashiCorp Consul Chart 
+
+
+5. Add bitnami helm chart repository in the controlplane node.
+The url for bitnami repository is https://charts.bitnami.com/bitnami
+
+Run helm help and search for helm repo command to add chart repository.
+
+controlplane ~ ➜  helm repo add bitnami https://charts.bitnami.com/bitnami
+"bitnami" has been added to your repositories
+
+controlplane ~ ➜  helm repo help
+
+This command consists of multiple subcommands to interact with chart repositories.
+
+It can be used to add, remove, list, and index chart repositories.
+
+Usage:
+  helm repo [command]
+Available Commands:
+  add         add a chart repository
+  index       generate an index file given a directory containing packaged charts
+  list        list chart repositories
+  remove      remove one or more chart repositories
+  update      update information of available charts locally from chart repositories
+
+
+6. Which command is used to search for the wordpress package from the newly added bitnami repository?
+-helm find search wordpress
+-helm find repo wordpress
+-helm search hub wordpress
+-helm search repo wordpress <---
+-helm get repo wordpress
+
+
+7. How many helm chart repositories are there in the controlplane node now?
+We have added a few helm chart repositories in the controlplane node now.
+
+controlplane ~ ➜  helm repo list
+NAME            URL                                                 
+bitnami         https://charts.bitnami.com/bitnami                  
+puppet          https://puppetlabs.github.io/puppetserver-helm-chart
+hashicorp       https://helm.releases.hashicorp.com 
+
+-7
+-1
+-3 <---
+-9
+-5
+
+
+8. Deploy the Apache application on the cluster using the apache from the bitnami repository.
+Set the release Name to: amaze-surf
+
+helm install amaze-surf bitnami/apache <------------
+
+controlplane ~ ✖ wget https://charts.bitnami.com/bitnami 
+--2025-09-29 14:14:19--  https://charts.bitnami.com/bitnami
+Resolving charts.bitnami.com (charts.bitnami.com)... 13.225.47.57, 13.225.47.105, 13.225.47.126, ...
+Connecting to charts.bitnami.com (charts.bitnami.com)|13.225.47.57|:443... connected.
+HTTP request sent, awaiting response... 403 Forbidden
+2025-09-29 14:14:19 ERROR 403: Forbidden.
+
+Resolution:
+controlplane ~ ✖ helm install amaze-surf oci://registry-1.docker.io/bitnamicharts/apache
+Pulled: registry-1.docker.io/bitnamicharts/apache:11.4.29
+Digest: sha256:fa6dbac6ea30fe7adb9bee2407593090863ae711feb9dec13cd6275642aaa94a
+NAME: amaze-surf
+LAST DEPLOYED: Mon Sep 29 14:16:03 2025
+NAMESPACE: default
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+CHART NAME: apache
+CHART VERSION: 11.4.29
+APP VERSION: 2.4.65
+
+
+
+9. What version of apache did we just install on the cluster using the helm chart?
+-2.4.65 <---
+-2.4.1
+-2.4.7
+-2.2.9
+controlplane ~ ➜  helm list
+NAME            NAMESPACE       REVISION        UPDATED                                STATUS          CHART           APP VERSION
+amaze-surf      default         1               2025-09-29 14:19:20.526178225 +0000 UTCdeployed        apache-11.4.29  2.4.65
+
+
+10. How many releases of nginx charts can you see installed in the cluster now?
+Note: We just installed some charts
+-4
+-2 <---
+-5
+-6
+-0
+controlplane ~ ➜  helm list
+NAME            NAMESPACE       REVISION        UPDATED                                STATUS          CHART           APP VERSION
+amaze-surf      default         1               2025-09-29 14:19:20.526178225 +0000 UTCdeployed        apache-11.4.29  2.4.65     
+crazy-web       default         1               2025-09-29 14:20:25.860130835 +0000 UTCdeployed        nginx-19.0.0    1.27.4     
+happy-browse    default         1               2025-09-29 14:20:23.980644809 +0000 UTCdeployed        nginx-19.0.0    1.27.4   
+
+
+
+11. Uninstall the nginx chart release happy-browse from the cluster.
+controlplane ~ ➜  helm uninstall happy-browse
+release "happy-browse" uninstalled
+
+
+12. Remove the Hashicorp helm repository from the cluster.
+
+controlplane ~ ➜  helm repo list
+NAME            URL                                                 
+bitnami         https://charts.bitnami.com/bitnami                  
+puppet          https://puppetlabs.github.io/puppetserver-helm-chart
+hashicorp       https://helm.releases.hashicorp.com  
+
+controlplane ~ ➜  helm repo remove hashicorp
+"hashicorp" has been removed from your repositories
