@@ -1,1 +1,26 @@
+1. Add bitnami helm chart repository to the cluster.
+Bitnami chart repo: https://charts.bitnami.com/bitnami
+Note: - Make sure to add the bitnami chart to the cluster before moving to the next questions.
 
+Run helm help and search for helm repo command to add chart repository.
+
+controlplane ~ ✖ helm repo add bitnami https://charts.bitnami.com/bitnami
+"bitnami" has been added to your repositories
+
+
+2. 
+
+
+3. 
+
+
+4. 
+
+
+5. 
+
+
+6. 
+
+
+7. 
