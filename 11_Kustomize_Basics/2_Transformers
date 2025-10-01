@@ -1,0 +1,136 @@
+1. Explore the files and directories which are available at the /root/code/k8s directory and be ready to answer the upcoming questions.
+
+controlplane ~ ➜  tree /root/code/k8s
+/root/code/k8s
+├── db
+│   ├── NoSql
+│   │   ├── db-depl.yaml
+│   │   ├── db-service.yaml
+│   │   └── kustomization.yaml
+│   ├── Sql
+│   │   ├── db-depl.yaml
+│   │   ├── db-service.yaml
+│   │   └── kustomization.yaml
+│   ├── db-config.yaml
+│   └── kustomization.yaml
+├── kustomization.yaml
+├── monitoring
+│   ├── grafana-depl.yaml
+│   ├── grafana-service.yaml
+│   └── kustomization.yaml
+└── nginx
+    ├── kustomization.yaml
+    ├── nginx-depl.yaml
+    └── nginx-service.yaml
+
+5 directories, 15 files
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+2. What is the label that will get assigned to every Kubernetes resource within /root/code/k8s/ project?
+
+Solution:
+The question asked for a label that will be assigned to every resource. This means a commonLabels transformer will be applied on the root kustomization.yaml file in k8s directory .i.e. k8s/kustomization.yaml
+k8s/kustomization.yaml
+
+commonLabels:
+  sandbox: dev
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+3. What is the name that will be prefixed before all database resources?
+
+	data- <-----
+	logging
+	sandbox: dev
+	dev
+
+All database resources includes both sql and nosql configs. Inside the kustomization.yaml file in the db directory the namePrefix transformer will be applied.
+k8s/db/kustomization.yaml
+
+namePrefix: data-
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+4. What is the namespace that all the monitoring resources will be deployed to?
+	kube-system
+	default
+	kube-public
+	logging <-----
+
+Solution:
+The kustomization.yaml file in the monitoring directory has a namespace transformer set to logging.
+k8s/monitoring/kustomization.yaml
+
+namespace: logging
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+5. Assign the following annotation to all nginx and monitoring resources:
+owner: bob@gmail.com
+
+Need add vvvv to both monitoring and nginx k..yml files: 
+commonAnnotations:
+  app.kubernetes.io/managed-by: kustomize
+  owner: bob@gmail.com
+
+Solution:
+As we want to apply the annotation only to nginx and monitoring resources, we will modify the following files as shown below:
+k8s/nginx/kustomization.yaml and k8s/monitoring/kustomization.yaml
+
+commonAnnotations:
+  owner: bob@gmail.com
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+6. Transform all postgres images in the project to mysql.
+
+ (I have added this code:
+ (images:
+ (  - name: postgres
+ (    newName: mysql
+ (into file /k8s/db/Sql instead this file, specified in Soluteion, ---> k8s/kustomization.yaml and it worked, maybe it is wrong way
+
+Solution:
+Since the requirement was to change all postgres images to mysql this means adding an image transformer to the root kustomization.yaml file.
+k8s/kustomization.yaml
+
+images:
+  - name: postgres
+    newName: mysql
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+7. Transform all nginx images in the nginx directory to nginx:1.23.
+                                     ^^^^^^^^^^^^^^^
+File k..yml:
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - nginx-depl.yaml
+  - nginx-service.yaml
+
+commonAnnotations:
+  app.kubernetes.io/managed-by: kustomize
+  owner: bob@gmail.com
+
+images:
+  - name: nginx 
+    newTag: "1.23"
+|||||||||||||||||||||||||||||||||||||||||||||||	
+Solution:
+For this task, the kustomization.yaml file in the nginx directory needs to be modified with an image transformer.
+Since the image itself isn’t changing and only a new tag is getting assigned, add the newTag property as shown below:
+k8s/nginx/kustomization.yaml
+
+images:
+  - name: nginx
+    newTag: "1.23"

@@ -1,0 +1,283 @@
+1. Kustomize has the concepts of bases and overlays.
+In this lab we will explore and understand how to work with these features of Kustomize.
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+2. In /root/code/k8s , we have already created the base and overlays directories with various kubernetes object files.
+Please inspect the directories and files and answer the following questions
+
+controlplane ~ ➜  tree /root/code/k8s
+/root/code/k8s
+├── base
+│   ├── api-deployment.yaml
+│   ├── db-configMap.yaml
+│   ├── kustomization.yaml
+│   └── mongo-depl.yaml
+└── overlays
+    ├── QA
+    │   └── kustomization.yaml
+    ├── dev
+    │   ├── api-patch.yaml
+    │   └── kustomization.yaml
+    ├── prod
+    │   ├── api-patch.yaml
+    │   ├── kustomization.yaml
+    │   └── redis-depl.yaml
+    └── staging
+        ├── configMap-patch.yaml
+        └── kustomization.yaml
+
+6 directories, 12 files
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+3. When deploying application to prod environment, what type of image will be used for the api-deployment?
+	nginx
+	haproxy
+	httpd
+	mongo
+	memcached <-----
+	
+Solution:
+The original api-deployment uses an image of nginx but in the prod overlay it gets patched to memcached as shown below:
+prod/api-patch.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: api
+          image: memcached
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+4. How many replicas for api-deployment will get deployed in prod?
+	2 <----- (not modified by overlay)
+	4
+	1
+	3
+Solution:
+The prod overlay patch for the api-deployment does not modify the replicas property, so it defaults to the value set in base/
+base/kustomization.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+spec:
+  replicas: 2
+.
+.
+.
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+5. What will be the value of the environment variable MONGO_INITDB_ROOT_PASSWORD in the mongo-deployment container in the staging environment?
+																														  ^^^^^^^
+	password
+	superp@ssword123 <-----
+	password123
+	mypassword
+	mongo
+
+Solution:
+In the mongo-deployment, mongodb container grabs the value for the MONGO_INITDB_ROOT_PASSWORD env variable from the db-cred configmap.
+This value was set to mypassword in the base directory but a patch is applied in the staging to set it to superp@ssword123.
+overlays/staging/configMap-patch.yaml
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-creds
+data:
+  username: mongo
+  password: superp@ssword123
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+6. When deploying to prod how many total pods are created?
+	1
+	3
+	2 
+	5 <----- (2 + 2 + 1)
+	4
+
+Solution:
+The prod environment will deploy 2 api pods, 2 redis pods and 1 mongo pod.
+||||||||||||||||||||||||||||||||||||||
+overlays/prod/kustomization.yaml
+
+resources:
+  - redis-depl.yaml
+||||||||||||||||||||||||||||||||||||||
+overlays/prod/redis-depl.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment
+spec:
+  replicas: 2
+.
+.
+.
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+7. How many environment variables are set on the nginx container in the api-deployment in dev environment?
+--- nginx env vars ---> api-deployment ---> dev
+	4
+	2 
+	1
+	3 <--- (start from 1 var into /root/code/k8s/base/api-deployment.yaml and then overlay add 2 new in /root/code/k8s/overlays/dev/api-patch.yaml)
+
+Solution:
+In the base configuration for api-deployment.yaml, 1 environment variable DB_CONNECTION is set.
+In the dev overlay, a patch adds 2 extra environment variables DB_USERNAME & DB_PASSWORD.
+base/api-deployment.yaml
+...
+      containers:
+        - name: api
+          image: nginx
+          env:
+            - name: DB_CONNECTION <-----
+              value: db.kodekloud.com
+...
+|||||||||||||||||||||||||||||||||||||||
+overlays/dev/api-patch.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+.
+.
+.
+      containers:
+        - name: api
+          image: nginx
+          env:
+            - name: DB_USERNAME <-----
+              valueFrom:
+                configMapKeyRef:
+                  name: db-creds
+                  key: username
+            - name: DB_PASSWORD <-----
+              valueFrom:
+                configMapKeyRef:
+                  name: db-creds
+                  key: password
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+8. Update the api image in the api-deployment to use caddy docker image in the QA environment.
+Perform this using an inline JSON6902 patch.
+                             ^^^^^^^^
+Note: Please ensure to apply the updated config for QA environment before validation.
+
+Add file to QA-dir ---> /root/code/k8s/overlays/QA/api-patch.yaml:
+
+Soluion:
+In the kustomization.yaml file which is located at the /root/code/k8s/overlays/QA directory, add a json6902 patch to update the image as shown below:
+overlays/QA/kustomization.yaml
+patches:
+  - target:
+      kind: Deployment
+      name: api-deployment
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: caddy
+||||||||||||||||||||||||||||||||
+After modifications, apply the changes to create updated deployments in QA environment:
+kubectl apply -k /root/code/k8s/overlays/QA
+Через файл 
+#patches:
+#  - api-patch.yaml не прокатило
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+9. A mysql database needs to be added only in the staging environment.
+Create a mysql deployment in a file called mysql-depl.yaml and define the deployment name as mysql-deployment.
+Deploy 1 replica of the mysql container using mysql image and set the following env variables:
+
+- name: MYSQL_ROOT_PASSWORD
+  value: mypassword
+
+NOTE: Please ensure to deploy the changes committed in the staging environment before validation.
+What have i done:
+	1. create /root/code/k8s/overlays/staging/mysql-depl.yaml
+	2. here /root/code/k8s/overlays/staging/kustomization.yaml add 
+resources:
+  - mysql-depl.yaml
+	3. Add content to /root/code/k8s/overlays/staging/mysql-depl.yaml:
+	apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: mysql
+  template:
+    metadata:
+      labels:
+        component: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: mypassword
+||||||||||||||||||||||||||||||||||||||||||
+	4. controlplane ~ ➜  kubectl apply -k /root/code/k8s/overlays/staging/
+
+Solution:
+First let's create overlays/staging/mysql-depl.yaml as per the requirements:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: mysql
+  template:
+    metadata:
+      labels:
+        component: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: mypassword
+|||||||||||||||||||||||||||||||||||||||||
+Now update the staging environment kustomization.yaml file to include the deployment file we created earlier:
+overlays/staging/kustomization.yaml
+resources:
+  - mysql-depl.yaml
+
+Applying the changes to k8s cluster for staging environment:
+
+kubectl apply -k /root/code/k8s/overlays/staging
+---------------------------------------------------------------------------------------------------------------------------------------------
