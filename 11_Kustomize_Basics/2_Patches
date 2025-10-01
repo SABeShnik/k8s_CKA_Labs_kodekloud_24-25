@@ -1,1 +1,219 @@
+1. In this lab we will explore Kustomize patches.
+It is another method to modifying Kubernetes configs.
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+2. We have created several Kubernetes resource files in /root/code/k8s along with it's corresponding kustomization.yaml file.
+Explore the directory and answer the upcoming questions.
+controlplane ~ ➜  tree
+.
+└── code
+    ├── README.md
+    └── k8s
+        ├── kustomization.yaml
+        ├── mongo-depl.yaml
+        ├── mongo-label-patch.yaml
+        ├── mongo-service.yaml
+        └── nginx-depl.yaml
+
+2 directories, 6 files
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+3. How many nginx pods will get created?
+  -5
+  -2
+  -4
+  -3 <---
+  -1
+
+Solution: 
+The original nginx-deployment has a replicaCount of 1 but there is a patch in the kustomization.yaml file that changes it to 3.
+kustomization.yaml
+patches:
+  - target:
+      kind: Deployment
+      name: nginx-deployment
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+4. What are the labels that will be applied to the mongo deployment?
+  -component=mongo, feature=db
+  -component=mongo
+  -cluster=staging, feature=database, component=mongo
+  -cluster=staging,component=mongo,feature=db <-----
+  -component=mongo, cluster=staging
+  -cluster=staging
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+5. What is the target port of the mongo-cluster-ip-service?
+  -40000
+  -30000 <-----
+  -27017
+  -20000
+  -3000
+
+Solution:
+mongo-service.yaml
+ports:
+  - port: 27017
+    targetPort: 27017
+
+Kustomization.yaml with patch
+- target:
+      kind: Service
+      name: mongo-cluster-ip-service
+    patch: |-
+      - op: replace
+        path: /spec/ports/0/port
+        value: 30000
+
+      - op: replace
+        path: /spec/ports/0/targetPort
+        value: 30000
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+6. We just added few files along with some modifications in the k8s directory, observe the changes and answer the following questions.
+How many containers are in the api pod?
+
+  -2 <---
+  -4
+  -5
+  -1 
+
+controlplane ~ ➜  tree
+.
+└── code
+    ├── README.md
+    └── k8s
+        ├── api-depl.yaml
+        ├── api-patch.yaml
+        ├── host-pv.yaml
+        ├── host-pvc.yaml
+        ├── kustomization.yaml
+        ├── mongo-depl.yaml
+        ├── mongo-patch.yaml
+        └── mongo-service.yaml
+
+2 directories, 9 files
+
+Solution:
+The api-deployment has one container defined but the patch in api-patch.yaml adds a new container using memcached image:
+api-patch.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: memcached
+          image: memcached
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+7. What path in the mongo container is the mongo-volume volume mounted at?
+  -/etc/
+  -/data/db <-----
+  -/bin/
+  -/lib/
+  -/data/
+
+Solution:
+The patch in mongo-patch.yaml mounts the mongo-volume in /data/db:
+mongo-patch.yaml
+...      
+      containers:
+        - name: mongo
+          volumeMounts:
+            - mountPath: /data/db
+              name: mongo-volume
+      volumes:
+        - name: mongo-volume
+          persistentVolumeClaim:
+            claimName: host-pvc
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+8. In api-patch.yaml create a strategic merge patch to remove the memcached container.
+
+controlplane ~ ✖ kubectl apply -k /root/code/k8s/
+service/mongo-cluster-ip-service created
+deployment.apps/mongo-deployment created
+The Deployment "api-deployment" is invalid: spec.template.spec.containers: Required value
+--- api-patch.yml ---> new ver:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - $patch: delete
+          name: memcached
+||||||||||||||||||||||||||||||||||||||||||||||
+Solution:
+api-patch.yaml file
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - $patch: delete
+          name: memcached
+Let's apply the config too:
+kubectl apply -k /root/code/k8s/
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+9. Create an inline json6902 patch in the kustomization.yaml file to remove the label org: KodeKloud from the mongo-deployment.
+
+New file kustomization.yaml:
+resources:
+  - mongo-depl.yaml
+  - api-depl.yaml
+  - mongo-service.yaml
+
+patches:
+  - target:
+      kind: Deployment
+      name: mongo-deployment
+    patch: |-
+      - op: remove
+        path: /spec/template/metadata/labels/org
+
+#- op: remove
+#path: /metadata/labels/component/org
+||||||||||||||||||||||||||||||||||||||||||||||||||||
+controlplane ~ ➜  kubectl apply -k /root/code/k8s/
+service/mongo-cluster-ip-service created
+deployment.apps/api-deployment created
+deployment.apps/mongo-deployment created
+
+
+Solution:
+kustomization.yaml
+
+patches:
+  - target:
+      kind: Deployment
+      name: mongo-deployment
+    patch: |-
+      - op: remove
+        path: /spec/template/metadata/labels/org
+Let's apply the config too:
+kubectl apply -k /root/code/k8s/
+---------------------------------------------------------------------------------------------------------------------------------------------
 
