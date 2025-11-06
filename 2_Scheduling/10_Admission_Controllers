@@ -1,0 +1,164 @@
+1. What is not a function of admission controller?
+
+- help us implement better security measures
+- authenticate user <---------------
+- validate configuration
+- perform additional operations before the pod gets created
+
+Hint:
+Admission controllers in Kubernetes are components that intercept requests to the API server after authentication and authorization, but before the object is persisted. They are used to enforce policies, validate configurations, and perform additional operations on resources being created or modified. However, they do not handle user authentication.
+
+Контроллеры доступа в Kubernetes — это компоненты, которые перехватывают запросы к серверу API после аутентификации и авторизации, но до сохранения объекта. Они используются для применения политик, проверки конфигураций и выполнения дополнительных операций над создаваемыми или изменяемыми ресурсами. Однако они не обрабатывают аутентификацию пользователей. <---------------
+-------------------------------------------------------------------------------------
+
+
+
+
+2. Which admission controller is not enabled by default?
+
+- ValidatingAdmissionWebhook 
+- MutatingAdmissionWebhook
+- NamespaceAutoProvision <---------------
+- NamespaceLifecycle
+
+Hunt:
+Admission controllers are enabled in Kubernetes via the --enable-admission-plugins flag in the API server configuration. To see which admission controllers are enabled by default, you can check the help options of the kube-apiserver binary.
+Note: The output of the help command can be long and hard to read. Look for the section listing the default enabled plugins.
+
+Solution:
+You can check the default enabled admission controllers by running the following command inside the control plane node or pod:
+
+kubectl exec -it kube-apiserver-controlplane -n kube-system -- kube-apiserver -h | grep 'enable-admission-plugins'
+Review the output and compare it with your options. The admission controller not listed as enabled by default is the correct answer.
+
+If the options are:
+NamespaceLifecycle
+MutatingAdmissionWebhook
+ValidatingAdmissionWebhook
+NamespaceAutoProvision
+
+And the default list does not include NamespaceAutoProvision, then
+NamespaceAutoProvision is the correct answer
+-------------------------------------------------------------------------------------
+
+
+
+
+3. Which admission controller is enabled in this cluster which is normally disabled?
+
+- NodeRestriction <---------------
+- NamespaceAutoProvision
+- DenyEscalatingExec
+- DenyExecOnPrivileged
+
+Hint:
+Check enable-admission-plugins in /etc/kubernetes/manifests/kube-apiserver.yaml
+
+controlplane ~ ➜  cat /etc/kubernetes/manifests/kube-apiserver.yaml | grep enable-admission-plugins
+    - --enable-admission-plugins=NodeRestriction <---------------
+
+controlplane ~ ✦ ➜  kubectl describe pod kube-apiserver-controlplane -n kube-system | grep -i "enabl
+e-admission-plugins"
+      --enable-admission-plugins=NodeRestriction
+
+Solution:
+To check for the enabled admission plugins in the Kubernetes API server configuration, execute the following command:
+
+grep enable-admission-plugins /etc/kubernetes/manifests/kube-apiserver.yaml
+The system response will be: NodeRestriction
+-------------------------------------------------------------------------------------
+
+
+
+4. Create an nginx pod in the blue namespace. Please note that the blue namespace does not currently exist. Do not create the blue namespace at this time.
+Execute the following command to deploy a pod using the nginx image within the blue namespace:
+
+kubectl run nginx --image nginx -n blue
+
+Note : Expected error in execution
+
+controlplane ~ ✦ ➜  kubectl get ns
+NAME              STATUS   AGE
+default           Active   31m
+kube-flannel      Active   31m
+kube-node-lease   Active   31m
+kube-public       Active   31m
+kube-system       Active   31m
+
+controlplane ~ ✦ ➜  kubectl run nginx --image nginx -n blue
+Error from server (NotFound): namespaces "blue" not found
+-------------------------------------------------------------------------------------
+
+
+
+5. The previous step failed due to the NamespaceExists admission controller being enabled in Kubernetes. This controller rejects requests for namespaces that do not already exist. Therefore, to automatically create a namespace that does not exist, you should enable the NamespaceAutoProvision admission controller.
+
+Enable the NamespaceAutoProvision admission controller
+
+Note: Once you update kube-apiserver yaml file, please wait for a few minutes for the kube-apiserver to restart completely.
+
+Hint:
+Edit the API server manifest file:
+/etc/kubernetes/manifests/kube-apiserver.yaml on the control plane node.
+Add NamespaceAutoProvision to the --enable-admission-plugins list.
+Important: Use the exact capitalization: NamespaceAutoProvision.
+The line should look like:
+--enable-admission-plugins=NodeRestriction,NamespaceAutoProvision
+(Add to the existing list if there are other plugins.)
+
+Save the file and exit.
+Wait a few minutes for the kube-apiserver pod to automatically restart and pick up the new configuration.
+Check pod status with:
+kubectl get pods -n kube-system
+
+Solution:
+Add NamespaceAutoProvision admission controller to the --enable-admission-plugins list
+in /etc/kubernetes/manifests/kube-apiserver.yaml.
+
+It should look like this:
+
+spec:
+  containers:
+    - name: kube-apiserver
+      image: registry.k8s.io/kube-apiserver:v1.33.0
+      imagePullPolicy: IfNotPresent
+      command:
+        - kube-apiserver
+        - --enable-admission-plugins=NodeRestriction,NamespaceAutoProvision
+        # ...other flags...
+After saving the file, the API server will automatically restart and pick up this configuration.
+Check pod status with:
+
+kubectl get pods -n kube-system
+Note: This command may not yield immediate results due to the updated configuration of the kube-apiserver.
+-------------------------------------------------------------------------------------
+
+
+
+6. 
+
+-------------------------------------------------------------------------------------
+
+7. 
+
+-------------------------------------------------------------------------------------
+
+8. 
+
+-------------------------------------------------------------------------------------
+
+9. 
+
+-------------------------------------------------------------------------------------
+
+10. 
+
+-------------------------------------------------------------------------------------
+
+11. 
+
+-------------------------------------------------------------------------------------
+
+12. 
+
+-------------------------------------------------------------------------------------
