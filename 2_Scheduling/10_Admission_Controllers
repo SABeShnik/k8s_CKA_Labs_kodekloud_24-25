@@ -131,33 +131,189 @@ Check pod status with:
 
 kubectl get pods -n kube-system
 Note: This command may not yield immediate results due to the updated configuration of the kube-apiserver.
+
+controlplane ~ ✦ ➜  vi /etc/kubernetes/manifests/kube-apiserver.yaml
+
+controlplane ~ ✦ ➜  kubectl get pods -n system
+The connection to the server controlplane:6443 was refused - did you specify the right host or port?
+
+controlplane ~ ✦ ✖ kubectl get pods -n system
+No resources found in system namespace.
 -------------------------------------------------------------------------------------
 
 
 
-6. 
+
+6. Now, let's run the nginx pod in blue namespace again and check if it succeeds.
+kubectl run nginx --image nginx -n blue
+controlplane ~ ✦ ➜  kubectl run nginx --image nginx -n blue
+pod/nginx created
+-------------------------------------------------------------------------------------
+
+
+
+
+7. Please be aware that the NamespaceExists and NamespaceAutoProvision admission controllers have been deprecated and are now succeeded by the NamespaceLifecycle admission controller.
+
+The NamespaceLifecycle admission controller ensures that any requests made to a non-existent namespace are rejected, and it safeguards the default namespaces, including default, kube-system, and kube-public, from being deleted.
+Контроллер допуска NamespaceLifecycle гарантирует, что любые запросы к несуществующему пространству имен будут отклонены, а также защищает пространства имен по умолчанию, включая default, kube-system и kube-public, от удаления.
+-------------------------------------------------------------------------------------
+
+
+
+
+8. A file named myclaim.yaml is available in your working directory. Please examine its contents and apply it to the cluster.
+
+File Location: /root/myclaim.yaml
+Run command :
+kubectl apply -f myclaim.yaml
+
+controlplane ~ ✦ ➜  cat myclaim.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myclaim
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 0.5Gi
+
+controlplane ~ ✦ ➜  kubectl apply -f myclaim.yaml
+persistentvolumeclaim/myclaim created
+-------------------------------------------------------------------------------------
+
+9. After applying myclaim.yaml, which StorageClass was assigned to the PVC myclaim?
+
+- No StorageClass
+- A manually specified StorageClass
+- The default StorageClass <---------------
+
+Hint:
+Check the output of kubectl get pvc myclaim -o yaml and look under spec.storageClassName.
+Note:
+The default StorageClass in this cluster is configured with volumeBindingMode: WaitForFirstConsumer. As a result, the Persistent Volume Claim (PVC) will remain in the Pending state until a Pod that uses this PVC is created and scheduled.
+
+Solution:
+Since myclaim.yaml does not specify a storageClassName, the default StorageClass is automatically assigned by the DefaultStorageClass admission controller.
+Note:
+The default StorageClass in this cluster is configured with volumeBindingMode: WaitForFirstConsumer. As a result, the Persistent Volume Claim (PVC) will remain in the Pending state until a Pod that uses this PVC is created and scheduled.
+---------------------------------------------------------------------------------------
+controlplane ~ ✦ ➜  kubectl describe pvc
+Name:          myclaim
+Namespace:     default
+StorageClass:  default <---------------
+Status:        Pending
+Volume:        
+Labels:        <none>
+Annotations:   <none>
+Finalizers:    [kubernetes.io/pvc-protection]
+Capacity:      
+Access Modes:  
+VolumeMode:    Filesystem
+Used By:       <none>
+Events:
+  Type    Reason                Age               From                         Message
+  ----    ------                ----              ----                         -------
+  Normal  WaitForFirstConsumer  5s (x4 over 47s)  persistentvolume-controller  waiting for first consumer to be created before binding
 
 -------------------------------------------------------------------------------------
 
-7. 
 
+
+
+10. To disable the DefaultStorageClass admission controller, please edit the file located at /etc/kubernetes/manifests/kube-apiserver.yaml. In the kube-apiserver command section, add the following line:
+
+--disable-admission-plugins=DefaultStorageClass
+After making this change, save the file and allow a few minutes for the kube-apiserver to restart.
+
+
+Note: After implementing this change, Kubernetes will cease to automatically assign the default StorageClass to new PersistentVolumeClaims (PVCs) that do not explicitly define a storageClassName. However, to fully prevent automatic provisioning, ensure that no StorageClass is marked as default in your cluster.
+После внедрения этого изменения Kubernetes перестанет автоматически назначать класс хранилища по умолчанию новым заявкам PersistentVolumeClaims (PVC), в которых явно не определено имя класса хранилища. Однако, чтобы полностью предотвратить автоматическое выделение ресурсов, убедитесь, что ни один класс хранилища не отмечен как класс по умолчанию в вашем кластере.
+
+
+Hint:
+To disable the DefaultStorageClass admission controller, edit /etc/kubernetes/manifests/kube-apiserver.yaml and add:
+
+--disable-admission-plugins=DefaultStorageClass
+to the kube-apiserver command section.
+
+Save the file and wait a few minutes for the kube-apiserver to restart.
+
+
+Solution:
+Disable the DefaultStorageClass Admission Controller:
+
+Edit /etc/kubernetes/manifests/kube-apiserver.yaml.
+In the command: section for the kube-apiserver container, add:
+  - --disable-admission-plugins=DefaultStorageClass
+Example snippet:
+  spec:
+    containers:
+      - name: kube-apiserver
+        command:
+          - kube-apiserver
+          # ...other flags...
+          - --disable-admission-plugins=DefaultStorageClass
+Save the file and wait a few minutes for the kube-apiserver to restart.
+
+
+DefaultStorageClass added to disable-admission-plugins?
 -------------------------------------------------------------------------------------
 
-8. 
 
+
+
+11. Now that the DefaultStorageClass admission controller has been disabled, please revisit the original Persistent Volume Claim (PVC) named myclaim to observe the new behavior.
+
+Delete the existing PVC and reapply it to observe the effects of disabling the default StorageClass.
+
+Delete the existing PVC named myclaim:
+
+kubectl delete pvc myclaim
+
+Reapply the same manifest:
+
+kubectl apply -f myclaim.yaml
+
+Check the status of the PVC:
+
+kubectl get pvc myclaim
+
+Note: Disabling the DefaultStorageClass admission controller removes the automatic assignment of the default StorageClass. The StorageClass that was previously marked as default has already been patched.
+
+
+Hint:
+After disabling the DefaultStorageClass admission controller, new PVCs without a storageClassName will not be dynamically provisioned. Check if the PVC remains in the Pending state.
+
+If a StorageClass is still marked as default in your cluster, Kubernetes may continue to assign it to PVCs even after disabling the admission controller. To fully prevent automatic assignment, ensure that no StorageClass is annotated as default (storageclass.kubernetes.io/is-default-class: "true").
+You can check and remove the default annotation with:
+---------------------------------------
+controlplane ~ ✦ ➜  kubectl describe pvc
+Name:          myclaim
+Namespace:     default
+StorageClass:  default
+Status:        Pending
+
+kubectl delete pvc myclaim
+kubectl apply -f myclaim.yaml
+
+controlplane ~ ✦ ➜  kubectl describe pvc
+Name:          myclaim
+Namespace:     default
+StorageClass:  
+Status:        Pending
+
+Events:
+  Type    Reason         Age                From                         Message
+  ----    ------         ----               ----                         -------
+  Normal  FailedBinding  10s (x2 over 14s)  persistentvolume-controller  no persistent volumes available for this claim and no storage class is set
 -------------------------------------------------------------------------------------
 
-9. 
 
--------------------------------------------------------------------------------------
 
-10. 
-
--------------------------------------------------------------------------------------
-
-11. 
-
--------------------------------------------------------------------------------------
 
 12. 
 
