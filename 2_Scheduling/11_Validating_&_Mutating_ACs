@@ -100,70 +100,321 @@ spec:
       - name: webhook-tls-certs
         secret:
           secretName: webhook-server-tls
+
+controlplane ~ ➜  kubectl get deployments -ALL
+NAMESPACE      NAME             READY   UP-TO-DATE   AVAILABLE   AGE     L
+kube-system    coredns          2/2     2            2           24m     
+webhook-demo   webhook-server   1/1     1            1           4m28s  
 -------------------------------------------------------------------------------------
 
 
 
 
-6. 
+6. Create a service that exposes the webhook server so that the admission controller can communicate with it.
+We have already provided the service manifest at:
+/root/webhook-service.yaml
+Create the service using this definition.
 
+controlplane ~ ➜  kubectl apply -f /root/webhook-service.yaml
+service/webhook-server created
+
+controlplane ~ ✖ kubectl get service -ALL
+NAMESPACE      NAME             TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                  AGE   L
+default        kubernetes       ClusterIP   172.20.0.1      <none>        443/TCP                  23m   
+kube-system    kube-dns         ClusterIP   172.20.0.10     <none>        53/UDP,53/TCP,9153/TCP   23m   
+webhook-demo   webhook-server   ClusterIP   172.20.81.191   <none>        443/TCP                  52s   
+-------------------------------------------------------------------------------------
+
+
+
+
+7. We have added the MutatingWebhookConfiguration under /root/webhook-configuration.yaml. 
+Upon applying this configuration, which resources and actions will it impact?
+
+Hint:
+Inspect the operations and resources sections under rules in the file located at 
+/root/webhook-configuration.yaml.
+
+- Pod with DELETE operations
+- Deployment with DELETE operations
+- Deployment with CREATE operations
+- Pod with CREATE operations
+
+controlplane ~ ➜  cat /root/webhook-configuration.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: demo-webhook
+webhooks:
+  - name: webhook-server.webhook-demo.svc
+    clientConfig:
+      service:
+        name: webhook-server
+        namespace: webhook-demo
+        path: "/mutate"
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURQekNDQWllZ0F3SUJBZ0lVWHM5d1ZiNkpDcVZIRGtBQ2tvcEF1N054ay84d0RRWUpLb1pJaHZjTkFRRUwKQlFBd0x6RXRNQ3NHQTFVRUF3d2tRV1J0YVhOemFXOXVJRU52Ym5SeWIyeHNaWElnVjJWaWFHOXZheUJFWlcxdgpJRU5CTUI0WERUSTFNVEV3TnpFek1ERTBOVm9YRFRJMU1USXdOekV6TURFME5Wb3dMekV0TUNzR0ExVUVBd3drClFXUnRhWE56YVc5dUlFTnZiblJ5YjJ4c1pYSWdWMlZpYUc5dmF5QkVaVzF2SUVOQk1JSUJJakFOQmdrcWhraUcKOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQThHZWxJL2ZqZFlsbHVtaERzd3pESWZQS2tSQ3FQNWM5MFJXbwppTDJyRGNPUTVKMGpaSWRLQ2FyOS8zeVV1L3ovQ3ZlV0w3NXZuNnJJVGpCTDdKei9SSWsxem42TDl4ajZzTWZrCkVkUGhsSTYyVFRoVlc5V0Q3WjN2QnlNb2xtT3p0S24vWTJkTmRuWkxWUzNuOWxndEpvaXFWZDhZUmpVZ0paMDUKTmJHWUkxQ1A0eUNQeW9oMWNYdFJKRHRhUjB6bXVSTnpiaTRTRlk0cWZ3eXArWXhUZmtSOTdlTytOdDNkSnF6NwppcXkvUWtNM21XK1ZUN1pkcXZweHpueEJyRzc5L0Y3R1ZPZzVFYVR5dDZ6RytSMVpkR3Z3WktDVGRwYkFnUzAwCm1JSWtoNTNiNlNmYjZuVklNMVJ2d2wvY3BZOXFrOGxGT0JJdW5EU0MyOVZIUzBPR1p3SURBUUFCbzFNd1VUQWQKQmdOVkhRNEVGZ1FVZlo0WW9QTFdORWFncnVtc3BudzV5TnVHeG9jd0h3WURWUjBqQkJnd0ZvQVVmWjRZb1BMVwpORWFncnVtc3BudzV5TnVHeG9jd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBTkJna3Foa2lHOXcwQkFRc0ZBQU9DCkFRRUFLUlp2TXU3aFVBcGVqaGZkUWdmdWYzOUxzT2psc1N4ei9Lb21oODVwU2hYWlg3SkxBZmZuUmtyTzVBT0kKUHk1QnJKQmJQMENHdGQ3ZkYxTUF1bGNhRUhXajc0UGZWejJrMUlvdFpSSGR1TDZBeG5JUStPK0l1OWRFdFMwSApCNTQzaThCRE1IaFg2c243SENhNi82UzFNTExrS3NPMVlMNkxOelhsdFVUbzY3clUrZGpUUG1ZYlpiVGhUSVNRCllRZWduY2RwcERwMTc1eWdOK2RwcEpaWmVZQjBlS3RLUHA0TXlIcXNGdFd4N2pGVFNiZnY1MElVY2RsTUptM2sKRnhCZnlmbWtNSi9vQ3VneFdRM1dncWlvN0VsS3VRelZKZWZkZjNGSzR6V0dEY3hJRjVZWTZuSmp6ZHFyWnd1bgpCd2JlbnkxK2E5S3NETkdLOXJnaGRCVEMrQT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+    rules:
+      - operations: [ "CREATE" ] <---------------
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"] <---------------
+    admissionReviewVersions: ["v1beta1"]
+    sideEffects: None
+-------------------------------------------------------------------------------------
+
+
+
+
+8. Now lets deploy MutatingWebhookConfiguration in /root/webhook-configuration.yaml
+
+Solution:
+Run command:
+kubectl create -f /root/webhook-configuration.yaml
+
+controlplane ~ ✖ kubectl apply -f /root/webhook-configuration.yaml
+mutatingwebhookconfiguration.admissionregistration.k8s.io/demo-webhook created
+-------------------------------------------------------------------------------------
+
+
+
+
+9. In the previous steps, you have set up and deployed a demo webhook with the following behaviors:
+
+Denies all requests for pods to run as root in a container if no securityContext is provided.
+Defaults: If runAsNonRoot is not set, the webhook automatically adds runAsNonRoot: 
+true and sets the user ID to 1234.
+Explicit root access: The webhook allows containers to run as root only if you explicitly set runAsNonRoot: false in the pod's securityContext.
+In the next steps, you will find pod definition files for each scenario. 
+Please deploy these pods using the provided definition files and validate the behavior of our webhook.
 
 -------------------------------------------------------------------------------------
 
 
 
 
-7. 
+10. Deploy a pod that does not explicitly define a securityContext.
+This will help verify that the webhook applies default values.
+We have already provided the manifest:
+/root/pod-with-defaults.yaml
 
+kubectl apply -f /root/pod-with-defaults.yaml
+
+controlplane ~ ✖ cat /root/pod-with-defaults.yaml
+# A pod with no securityContext specified.
+# Without the webhook, it would run as user root (0). The webhook mutates it
+# to run as the non-root user with uid 1234.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-with-defaults
+  labels:
+    app: pod-with-defaults
+spec:
+  restartPolicy: OnFailure
+  containers:
+    - name: busybox
+      image: busybox
+      command: ["sh", "-c", "echo I am running as user $(id -u)"]
+-------------------------------------------------------------------------------------
+
+
+
+
+11. Check the securityContext of the pod created in the previous step (pod-with-defaults).
+Even though we did not specify any values in the pod definition, 
+the mutation webhook should have injected default values.
+
+- runAsNonRoot: false , runAsUser: 1234
+- runAsNonRoot: true , runAsUser: 0
+- runAsNonRoot: true , runAsUser: 1234 <---------------
+- runAsNonRoot: false , runAsUser: 0
+
+Hint:
+Use kubectl get pod -o yaml to inspect the pod spec and look for the securityContext fields.
+
+controlplane ~ ✖ kubectl get pod pod-with-defaults -o yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","kind":"Pod","metadata":{"annotations":{},"labels":{"app":"pod-with-defaults"},"name":"pod-with-defaults","namespace":"default"},"spec":{"containers":[{"command":["sh","-c","echo I am running as user $(id -u)"],"image":"busybox","name":"busybox"}],"restartPolicy":"OnFailure"}}
+  creationTimestamp: "2025-11-07T13:39:18Z"
+  generation: 1
+  labels:
+    app: pod-with-defaults
+  name: pod-with-defaults
+  namespace: default
+  resourceVersion: "3750"
+  uid: 8e8e25cf-935b-4aa5-aef4-5fff7de5ea33
+spec:
+  containers:
+  - command:
+    - sh
+    - -c
+    - echo I am running as user $(id -u)
+    image: busybox
+    imagePullPolicy: Always
+    name: busybox
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-98z5z
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: controlplane
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: OnFailure
+  schedulerName: default-scheduler
+  securityContext:  <--------------- <--------------- <--------------- <---------------
+    runAsNonRoot: true <--------------- <--------------- <--------------- <---------------
+    runAsUser: 1234 <--------------- <--------------- <--------------- <---------------
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - name: kube-api-access-98z5z
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-07T13:39:22Z"
+    observedGeneration: 1
+    status: "False"
+    type: PodReadyToStartContainers
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-07T13:39:18Z"
+    observedGeneration: 1
+    reason: PodCompleted
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-07T13:39:18Z"
+    observedGeneration: 1
+    reason: PodCompleted
+    status: "False"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-07T13:39:18Z"
+    observedGeneration: 1
+    reason: PodCompleted
+    status: "False"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-07T13:39:18Z"
+    observedGeneration: 1
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: containerd://fd511dd75e32bf8f31918a134dbab2a31263419cc8fe10e22c3abc7d7f70fe36
+    image: docker.io/library/busybox:latest
+    imageID: docker.io/library/busybox@sha256:e3652a00a2fabd16ce889f0aa32c38eec347b997e73bd09e69c962ec7f8732ee
+    lastState: {}
+    name: busybox
+    ready: false
+    resources: {}
+    restartCount: 0
+    started: false
+    state:
+      terminated:
+        containerID: containerd://fd511dd75e32bf8f31918a134dbab2a31263419cc8fe10e22c3abc7d7f70fe36
+        exitCode: 0
+        finishedAt: "2025-11-07T13:39:20Z"
+        reason: Completed
+        startedAt: "2025-11-07T13:39:20Z"
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-98z5z
+      readOnly: true
+      recursiveReadOnly: Disabled
+  hostIP: 192.168.28.24
+  hostIPs:
+  - ip: 192.168.28.24
+  observedGeneration: 1
+  phase: Succeeded
+  podIP: 172.17.0.6
+  podIPs:
+  - ip: 172.17.0.6
+  qosClass: BestEffort
+  startTime: "2025-11-07T13:39:18Z"
+
+Solution:
 
 -------------------------------------------------------------------------------------
 
 
 
 
-8. 
+12. Deploy pod with a securityContext explicitly allowing it to run as root
+We have added pod definition file under
+/root/pod-with-override.yaml
+Validate securityContext after you deploy this pod
 
+Solution:
+Run command:
+kubectl apply -f /root/pod-with-override.yaml
+then validate securityContext using the following command:
+kubectl get po pod-with-override -o yaml | grep -A2 " securityContext:"
 
+controlplane ~ ✖ kubectl apply -f /root/pod-with-override.yaml
+pod/pod-with-override created
+
+controlplane ~ ➜  kubectl get po pod-with-override -o yaml | grep -A2 " securityContext:"
+  securityContext:
+    runAsNonRoot: false
+  serviceAccount: default
 -------------------------------------------------------------------------------------
 
 
 
 
-9. 
+13. Deploy a pod that specifies a conflicting securityContext.
+The pod requests to run with runAsUser: 0 (root).
+But it does not explicitly set runAsNonRoot: false.
+According to our webhook rules, this request should be denied.
+We have already provided the manifest at:
+/root/pod-with-conflict.yaml
+
+controlplane ~ ➜  kubectl apply -f /root/pod-with-conflict.yaml
+Error from server: error when creating "/root/pod-with-conflict.yaml": admission webhook "webhook-server.webhook-demo.svc" denied the request: runAsNonRoot specified, but runAsUser set to 0 (the root user)
 
 
--------------------------------------------------------------------------------------
+Solution:
+Run command:
 
-
-
-
-10. 
-
-
--------------------------------------------------------------------------------------
-
-
-
-
-3. 
-
-
--------------------------------------------------------------------------------------
-
-
-
-
-3. 
-
-
--------------------------------------------------------------------------------------
-
-
-
-
-3. 
-
-
+kubectl apply -f /root/pod-with-conflict.yaml
+Expected Outcome:
+The admission webhook should reject this pod. You will see an error similar to:
+Error from server: error when creating "/root/pod-with-conflict.yaml": admission webhook "webhook-server.webhook-demo.svc" denied the request: runAsNonRoot specified, but runAsUser set to 0 (the root user)
 -------------------------------------------------------------------------------------
 
 
