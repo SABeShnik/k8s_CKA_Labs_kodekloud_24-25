@@ -9,6 +9,7 @@ Hint:
 Admission controllers in Kubernetes are components that intercept requests to the API server after authentication and authorization, but before the object is persisted. They are used to enforce policies, validate configurations, and perform additional operations on resources being created or modified. However, they do not handle user authentication.
 
 Контроллеры доступа в Kubernetes — это компоненты, которые перехватывают запросы к серверу API после аутентификации и авторизации, но до сохранения объекта. Они используются для применения политик, проверки конфигураций и выполнения дополнительных операций над создаваемыми или изменяемыми ресурсами. Однако они не обрабатывают аутентификацию пользователей. <---------------
+Контроллеры допуска — это код на API-сервере Kubernetes, который проверяет данные, поступающие в запросе на изменение ресурса. Контроллеры допуска применяются к запросам на создание, удаление или изменение объектов. Контроллеры допуска также могут блокировать пользовательские команды, например, запросы на подключение к поду через прокси-сервер API. Контроллеры допуска не блокируют (и не могут блокировать) запросы на чтение (получение, просмотр или перечисление) объектов, поскольку чтение обходит уровень управления допуском.
 -------------------------------------------------------------------------------------
 
 
@@ -21,9 +22,15 @@ Admission controllers in Kubernetes are components that intercept requests to th
 - NamespaceAutoProvision <---------------
 - NamespaceLifecycle
 
-Hunt:
+Hint:
 Admission controllers are enabled in Kubernetes via the --enable-admission-plugins flag in the API server configuration. To see which admission controllers are enabled by default, you can check the help options of the kube-apiserver binary.
 Note: The output of the help command can be long and hard to read. Look for the section listing the default enabled plugins.
+
+---
+In Kubernetes 1.34, the default ones are:
+
+CertificateApproval, CertificateSigning, CertificateSubjectRestriction, DefaultIngressClass, DefaultStorageClass, DefaultTolerationSeconds, LimitRanger, MutatingAdmissionWebhook, NamespaceLifecycle, PersistentVolumeClaimResize, PodSecurity, Priority, ResourceQuota, RuntimeClass, ServiceAccount, StorageObjectInUseProtection, TaintNodesByCondition, ValidatingAdmissionPolicy, ValidatingAdmissionWebhook
+---
 
 Solution:
 You can check the default enabled admission controllers by running the following command inside the control plane node or pod:
@@ -67,6 +74,7 @@ To check for the enabled admission plugins in the Kubernetes API server configur
 grep enable-admission-plugins /etc/kubernetes/manifests/kube-apiserver.yaml
 The system response will be: NodeRestriction
 -------------------------------------------------------------------------------------
+
 
 
 
@@ -315,6 +323,32 @@ Events:
 
 
 
-12. 
+12. Since the kube-apiserver is running as pod you can check the process to see enabled and disabled plugins.
 
+ps -ef | grep kube-apiserver | grep admission-plugins
+
+controlplane ~ ➜  ps -ef | grep kube-apiserver | grep admission-plugins
+root       20953   20829  0 12:53 ?        00:00:10 
+kube-apiserver --advertise-address=192.168.183.245 --allow-privileged=true --authorization-mode=Node,RBAC 
+--client-ca-file=/etc/kubernetes/pki/ca.crt 
+  --enable-admission-plugins=NodeRestriction,NamespaceAutoProvision 
+  --disable-admission-plugins=DefaultStorageClass 
+--enable-bootstrap-token-auth=true 
+--etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt 
+--etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt 
+--etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key 
+--etcd-servers=https://127.0.0.1:2379 
+--kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt 
+--kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key 
+--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname 
+--proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt 
+--proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key --requestheader-allowed-names=front-proxy-client 
+--requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt --requestheader-extra-headers-prefix=X-Remote-Extra- 
+--requestheader-group-headers=X-Remote-Group 
+--requestheader-username-headers=X-Remote-User --secure-port=6443 
+--service-account-issuer=https://kubernetes.default.svc.cluster.local 
+--service-account-key-file=/etc/kubernetes/pki/sa.pub 
+--service-account-signing-key-file=/etc/kubernetes/pki/sa.key 
+--service-cluster-ip-range=172.20.0.0/16 --tls-cert-file=/etc/kubernetes/pki/apiserver.crt 
+--tls-private-key-file=/etc/kubernetes/pki/apiserver.key
 -------------------------------------------------------------------------------------

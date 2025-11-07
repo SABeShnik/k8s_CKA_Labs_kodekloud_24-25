@@ -1,0 +1,171 @@
+1. Which of the below combination is correct for Mutating and validating admission controllers ?
+
+- NamespaceAutoProvision- Validating , NamespaceExists - Validating
+- NamespaceAutoProvision- Mutating , NamespaceExists - Mutating
+- NamespaceAutoProvision- Validating , NamespaceExists - Mutating
+- NamespaceAutoProvision- Mutating , NamespaceExists - Validating <---------------
+-------------------------------------------------------------------------------------
+
+
+
+
+2. What is the flow of invocation of admission controllers?
+
+- First Mutating then Validating <---------------
+- Mutating and Validating at same time
+- Mutating and Validating can run in any order
+- First Validating then Mutating
+-------------------------------------------------------------------------------------
+
+
+
+
+3. Create namespace webhook-demo where we will deploy webhook components
+
+controlplane ~ ➜  kubectl create namespace webhook-demo
+namespace/webhook-demo created
+-------------------------------------------------------------------------------------
+
+
+
+4. Create a TLS secret named webhook-server-tls in the webhook-demo namespace.
+This secret will be used by the admission webhook server for secure communication over HTTPS.
+We have already created below cert and key for webhook server which should be used to create secret.
+Cert : /root/keys/webhook-server-tls.crt
+Key : /root/keys/webhook-server-tls.key
+
+Hint:
+Use the Kubernetes command to create a TLS-type secret with the provided certificate and key files.
+The --cert flag specifies the certificate file and the --key flag specifies the private key file.
+
+
+Solution:
+Run below command:
+kubectl -n webhook-demo create secret tls webhook-server-tls \
+    --cert "/root/keys/webhook-server-tls.crt" \
+    --key "/root/keys/webhook-server-tls.key"
+
+kubectl create secret tls webhook-server-tls --cert=/root/keys/webhook-server-tls.crt --key=/root/keys/webhook-server-tls.key --dry-run=server [--dry-run=server|client|none] -n webhook-demo
+
+controlplane ~ ➜  kubectl create secret tls webhook-server-tls --cert=/root/keys/webhook-server-tls.crt --key=/root/keys/webhook-server-tls.key --dry-run=server -n webhook-demo
+secret/webhook-demo created (server dry run)
+-------------------------------------------------------------------------------------
+
+
+
+
+5. Create the webhook deployment that will run the admission webhook server.
+We have already provided the deployment manifest at:
+
+/root/webhook-deployment.yaml
+Create the deployement using this definition.
+
+controlplane ~ ➜  kubectl apply -f /root/webhook-deployment.yaml
+deployment.apps/webhook-server created
+
+~~~~~~~~~~~~~
+controlplane ~ ➜  cat /root/webhook-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook-server
+  namespace: webhook-demo
+  labels:
+    app: webhook-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webhook-server
+  template:
+    metadata:
+      labels:
+        app: webhook-server
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1234
+      containers:
+      - name: server
+        image: stackrox/admission-controller-webhook-demo:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8443
+          name: webhook-api
+        volumeMounts:
+        - name: webhook-tls-certs
+          mountPath: /run/secrets/tls
+          readOnly: true
+      volumes:
+      - name: webhook-tls-certs
+        secret:
+          secretName: webhook-server-tls
+-------------------------------------------------------------------------------------
+
+
+
+
+6. 
+
+
+-------------------------------------------------------------------------------------
+
+
+
+
+7. 
+
+
+-------------------------------------------------------------------------------------
+
+
+
+
+8. 
+
+
+-------------------------------------------------------------------------------------
+
+
+
+
+9. 
+
+
+-------------------------------------------------------------------------------------
+
+
+
+
+10. 
+
+
+-------------------------------------------------------------------------------------
+
+
+
+
+3. 
+
+
+-------------------------------------------------------------------------------------
+
+
+
+
+3. 
+
+
+-------------------------------------------------------------------------------------
+
+
+
+
+3. 
+
+
+-------------------------------------------------------------------------------------
+
+
+
+
