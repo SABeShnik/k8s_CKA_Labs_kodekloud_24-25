@@ -1,0 +1,373 @@
+1. Which API resource is used to define a Gateway in Kubernetes?
+The Gateway resource is used to define an instance of a Gateway API implementation in Kubernetes.
+It acts as an entry point for external traffic into the cluster.
+The GatewayClass resource defines a type of Gateway (i.e., the controller and its capabilities),
+but does not create an actual Gateway instance.
+To actually deploy a Gateway that routes traffic, you must create a Gateway resource.
+
+Ресурс Gateway используется для определения экземпляра реализации API Gateway в Kubernetes. Он выступает в качестве точки входа для внешнего трафика в кластер. Ресурс GatewayClass определяет тип Gateway (т.е. контроллер и его возможности), но не создает фактический экземпляр Gateway. Для фактического развертывания Gateway, маршрутизирующего трафик, необходимо создать ресурс Gateway.
+
+Answer = Gatawey 
+
+      ------------cluster-----------
+      | HTTProute -> GW -> Gwclass |
+      ------------------------------
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+
+
+
+2. What is the purpose of the allowedRoutes field in a Gateway?
+The allowedRoutes field in a Gateway listener determines which namespaces and types of Routes (like HTTPRoute, TCPRoute, etc.) are allowed to attach to that Gateway.
+By default, only Routes in the same namespace as the Gateway can attach.
+Setting namespaces.from: All allows Routes from all namespaces to attach.
+You can also restrict which kinds of Routes can attach using the kinds field.
+This enables fine-grained access control and safe multi-tenant routing.
+
+Поле allowedRoutes в обработчике событий Gateway определяет, каким пространствам имен и типам маршрутов (например, HTTPRoute, TCPRoute и т. д.) разрешено подключаться к этому Gateway.
+По умолчанию подключаться могут только маршруты из того же пространства имен, что и Gateway.
+Установка параметра namespaces.from: All позволяет подключаться маршрутам из всех пространств имен.
+Вы также можете ограничить типы маршрутов, которые могут подключаться, используя поле kinds.
+Это обеспечивает детальный контроль доступа и безопасную маршрутизацию для нескольких пользователей.
+Example:
+
+spec:
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All  # Allows Routes from all namespaces to attach
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: HTTPRoute
+
+Answer = To specify which namespaces can attach routes to the Gateway.
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+
+
+
+3. Which of the following protocols is NOT supported by the Kubernetes Gateway API?
+HTTPS
+TCP
+HTTP
+ICMP <---------------------
+
+The Kubernetes Gateway API supports HTTP, HTTPS, TCP, UDP, and TLS protocols.
+However, ICMP is not supported, as it is not a transport-layer protocol used for application traffic.
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+
+
+
+4. How does a GatewayClass differ from a Gateway?
+- GatewayClass defines how a Gateway is implemented by a controller. <------------------- 
+- GatewayClass is created dynamically when a Gateway is created.
+- A GatewayClass must exist inside the same namespace as a Gateway.
+- Gateway and GatewayClass are interchangeable.
+
+Solution:
+A GatewayClass is similar to an IngressClass; it defines the controller-specific behavior of a Gateway.
+A Gateway is an instance that references a GatewayClass to determine its underlying implementation.
+In short:
+GatewayClass: The template or type.
+Gateway: The deployed instance that uses the template.
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+
+
+
+5. What is the primary advantage of using Gateway API over Ingress?
+- It supports more advanced routing and multi-protocol support. <------------------- 
+- It is easier to configure than Ingress.
+- It replaces NetworkPolicy for security.
+- It does not require a controller to function.
+
+Hint:
+The Gateway API provides more advanced routing capabilities than Ingress, including:
+Multi-protocol support (HTTP, TCP, UDP, etc.)
+Better extensibility with Routes and Filters
+More granular access control using AllowedRoutes
+Unlike Ingress, which is primarily HTTP-based, Gateway API is designed for flexibility across multiple protocols.
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+
+
+
+6. To use the Gateway API, a controller is required. In this lab, we will install NGINX Gateway Fabric as the controller. Follow these steps to complete the installation:
+
+1- Install the Gateway API resources
+kubectl kustomize "https://github.com/nginx/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.5.1" | kubectl apply -f -
+controlplane ~ ➜  kubectl kustomize "https://github.com/nginx/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.5.1" | kubectl apply -f -
+Warning: unrecognized format "int64"
+customresourcedefinition.apiextensions.k8s.io/gatewayclasses.gateway.networking.k8s.io created
+Warning: unrecognized format "int32"
+customresourcedefinition.apiextensions.k8s.io/gateways.gateway.networking.k8s.io created
+customresourcedefinition.apiextensions.k8s.io/grpcroutes.gateway.networking.k8s.io created
+customresourcedefinition.apiextensions.k8s.io/httproutes.gateway.networking.k8s.io created
+customresourcedefinition.apiextensions.k8s.io/referencegrants.gateway.networking.k8s.io created
+
+2- Deploy the NGINX Gateway Fabric CRDs
+kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v1.6.1/deploy/crds.yaml
+controlplane ~ ➜  kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v1.6.1/deploy/crds.yaml
+Warning: unrecognized format "int32"
+Warning: unrecognized format "int64"
+customresourcedefinition.apiextensions.k8s.io/clientsettingspolicies.gateway.nginx.org created
+customresourcedefinition.apiextensions.k8s.io/nginxgateways.gateway.nginx.org created
+customresourcedefinition.apiextensions.k8s.io/nginxproxies.gateway.nginx.org created
+customresourcedefinition.apiextensions.k8s.io/observabilitypolicies.gateway.nginx.org created
+customresourcedefinition.apiextensions.k8s.io/snippetsfilters.gateway.nginx.org created
+customresourcedefinition.apiextensions.k8s.io/upstreamsettingspolicies.gateway.nginx.org created
+
+3- Deploy NGINX Gateway Fabric
+kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v1.6.1/deploy/nodeport/deploy.yaml
+controlplane ~ ➜  kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v1.6.1/deploy/nodeport/deploy.yaml
+namespace/nginx-gateway created
+serviceaccount/nginx-gateway created
+clusterrole.rbac.authorization.k8s.io/nginx-gateway created
+clusterrolebinding.rbac.authorization.k8s.io/nginx-gateway created
+configmap/nginx-includes-bootstrap created
+service/nginx-gateway created
+deployment.apps/nginx-gateway created
+gatewayclass.gateway.networking.k8s.io/nginx created
+nginxgateway.gateway.nginx.org/nginx-gateway-config created
+
+4- Verify the Deployment
+kubectl get pods -n nginx-gateway
+controlplane ~ ➜  kubectl get pods -n nginx-gateway
+NAME                             READY   STATUS    RESTARTS   AGE
+nginx-gateway-78bb8f9c6c-qxmww   2/2     Running   0          18s
+
+5- View the nginx-gateway service
+kubectl get svc -n nginx-gateway nginx-gateway -o yaml
+controlplane ~ ➜  kubectl get svc -n nginx-gateway nginx-gateway -o yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app.kubernetes.io/instance":"nginx-gateway","app.kubernetes.io/name":"nginx-gateway","app.kubernetes.io/version":"1.6.1"},"name":"nginx-gateway","namespace":"nginx-gateway"},"spec":{"externalTrafficPolicy":"Local","ports":[{"name":"http","port":80,"protocol":"TCP","targetPort":80},{"name":"https","port":443,"protocol":"TCP","targetPort":443}],"selector":{"app.kubernetes.io/instance":"nginx-gateway","app.kubernetes.io/name":"nginx-gateway"},"type":"NodePort"}}
+  creationTimestamp: "2026-01-13T09:38:05Z"
+  labels:
+    app.kubernetes.io/instance: nginx-gateway
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/version: 1.6.1
+  name: nginx-gateway
+  namespace: nginx-gateway
+  resourceVersion: "2642"
+  uid: 547e72fe-341c-4a9c-b561-8e8cee037203
+spec:
+  clusterIP: 172.20.153.96
+  clusterIPs:
+  - 172.20.153.96
+  externalTrafficPolicy: Local
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http
+    nodePort: 30816
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  - name: https
+    nodePort: 32668
+    port: 443
+    protocol: TCP
+    targetPort: 443
+  selector:
+    app.kubernetes.io/instance: nginx-gateway
+    app.kubernetes.io/name: nginx-gateway
+  sessionAffinity: None
+  type: NodePort
+status:
+  loadBalancer: {}
+
+6- Update the nginx-gateway service to expose ports 30080 for HTTP and 30081 for HTTPS
+kubectl patch svc nginx-gateway -n nginx-gateway --type='json' -p='[
+  {"op": "replace", "path": "/spec/ports/0/nodePort", "value": 30080},
+  {"op": "replace", "path": "/spec/ports/1/nodePort", "value": 30081}
+]'
+controlplane ~ ➜  kubectl get svc -n nginx-gateway nginx-gateway
+NAME            TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+nginx-gateway   NodePort   172.20.153.96   <none>        80:30080/TCP,443:30081/TCP   82s
+
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+7. Create a Kubernetes Gateway resource with the following specifications:
+
+Name: nginx-gateway
+Namespace: nginx-gateway
+
+Listeners:
+Protocol: HTTP
+Port: 80
+Name: http
+Allowed Routes: All namespaces
+    | | | | | | | | | | | 
+    V V V V V V V V V V V V
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: nginx-gateway
+  namespace: nginx-gateway
+spec:
+  gatewayClassName: nginx
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All  # Allows Routes from all namespaces to attach
+
+controlplane ~ ➜  kubectl apply  -f Gw.yaml 
+gateway.gateway.networking.k8s.io/example-gateway created
+controlplane ~ ➜  kubectl get gateways -n nginx-gateway
+NAME              CLASS   ADDRESS   PROGRAMMED   AGE
+example-gateway   nginx             True         38s
+
+Solution:
+Prerequisite: Make sure the Gateway API CRDs are installed and a compatible controller (like NGINX Gateway Fabric) is running.
+
+Create the Gateway manifest (gateway.yaml):
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: nginx-gateway
+  namespace: nginx-gateway
+spec:
+  gatewayClassName: nginx
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes: 
+        namespaces: 
+          from: All
+Deploy the manifest:
+kubectl apply -f gateway.yaml
+To verify the succesfull deployment, run the commands below:
+kubectl get gateways -n nginx-gateway
+kubectl describe gateway nginx-gateway -n nginx-gateway
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+8. A new pod named frontend-app and a service called frontend-svc have been deployed in the default namespace.
+Expose the service on the / path by creating an HTTPRoute named frontend-route.
+      ---------------------------------------------------------------------
+      | Client -> HTTP req -> GW -> HTTProute-Routing Rule -> Svc -> Pods |
+      ---------------------------------------------------------------------
+
+controlplane ~ ✖ kubectl get pod frontend-app
+NAME           READY   STATUS    RESTARTS   AGE
+frontend-app   1/1     Running   0          75s
+
+controlplane ~ ➜  kubectl get svc frontend-svc
+NAME           TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
+frontend-svc   ClusterIP   172.20.213.107   <none>        80/TCP    95s
+
+
+Solution:
+1.Confirm the pod and service exist:
+kubectl get pod,svc -n default
+
+2.Create the HTTPRoute manifest:
+Create a file named frontend-route.yaml with the following content:
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: frontend-route
+  namespace: default
+spec:
+  parentRefs:
+    - name: nginx-gateway           # Name of the Gateway
+      namespace: nginx-gateway      # Namespace where the Gateway is deployed
+      sectionName: http             # Attach to the 'http' listener
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: frontend-svc
+          port: 80
+parentRefs attaches the route to the nginx-gateway Gateway in the nginx-gateway namespace, specifically to the http listener.
+The rule matches all requests with a path prefix of / and forwards them to the frontend-svc service on port 80.
+
+3.Apply the manifest:
+kubectl apply -f frontend-route.yaml
+
+4.Verify the HTTPRoute:
+kubectl get httproute frontend-route 
+kubectl describe httproute frontend-route 
+
+controlplane ~ ✖ kubectl get httproute frontend-route 
+NAME             HOSTNAMES   AGE
+frontend-route               33s
+
+controlplane ~ ➜  kubectl describe httproute frontend-route
+Name:         frontend-route
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+API Version:  gateway.networking.k8s.io/v1
+Kind:         HTTPRoute
+Metadata:
+  Creation Timestamp:  2026-01-13T10:11:10Z
+  Generation:          1
+  Resource Version:    6283
+  UID:                 23ea24fe-41c0-4426-a1ca-dbe83eae3e6a
+Spec:
+  Parent Refs:
+    Group:         gateway.networking.k8s.io
+    Kind:          Gateway
+    Name:          nginx-gateway
+    Namespace:     nginx-gateway
+    Section Name:  http
+  Rules:
+    Backend Refs:
+      Group:   
+      Kind:    Service
+      Name:    frontend-svc
+      Port:    80
+      Weight:  1
+    Matches:
+      Path:
+        Type:   PathPrefix
+        Value:  /
+Status:
+  Parents:
+    Conditions:
+      Last Transition Time:  2026-01-13T10:11:10Z
+      Message:               The route is accepted
+      Observed Generation:   1
+      Reason:                Accepted
+      Status:                True
+      Type:                  Accepted
+      Last Transition Time:  2026-01-13T10:11:10Z
+      Message:               All references are resolved
+      Observed Generation:   1
+      Reason:                ResolvedRefs
+      Status:                True
+      Type:                  ResolvedRefs
+    Controller Name:         gateway.nginx.org/nginx-gateway-controller
+    Parent Ref:
+      Group:         gateway.networking.k8s.io
+      Kind:          Gateway
+      Name:          nginx-gateway
+      Namespace:     nginx-gateway
+      Section Name:  http
+Events:              <none>
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
