@@ -1,3 +1,27 @@
+Горизонтальный автомасштабировщик подов Kubernetes (HPA) автоматически регулирует количество реплик (подов) в развертывании, наборе состояний или наборе реплик на основе наблюдаемого использования ЦП/памяти или пользовательских метрик. Он предназначен для поддержания целевых уровней производительности, увеличивая количество реплик при высокой нагрузке и уменьшая их при низкой нагрузке для оптимизации ресурсов.
+Ключевые аспекты HPA:
+Источник метрик: HPA требует установки сервера метрик в кластере для сбора данных об использовании ресурсов.
+Логика масштабирования: HPA отслеживает метрики и корректирует количество реплик. Используется допуск 10% (по умолчанию), чтобы избежать постоянных незначительных корректировок масштабирования (гистерезиса).
+Компоненты: Работает с развертываниями, наборами реплик и наборами состояний.
+Ограничения:
+Не может использоваться с наборами демонов.
+Требуется определение ограничений ЦП/памяти для подов.
+Не подходит для приложений с сохранением состояния, которые не могут работать параллельно.
+
+Рекомендации по использованию:
+Используйте совместно с Cluster Autoscaler для добавления узлов по мере необходимости.
+Используйте с приложениями без сохранения состояния.
+Настройте запросы ресурсов для точного масштабирования.
+Версия 2 (v2) HPA позволяет:
+Использовать несколько метрик: масштабирование на основе пользовательских или внешних метрик.
+Окно стабилизации: предотвращение «рывков» (быстрого увеличения и уменьшения масштаба).
+Настраиваемый допуск: точная настройка чувствительности действий масштабирования (доступно в более новых версиях K8s).
+Команды:
+kubectl get hpa: просмотр состояния.
+kubectl describe hpa <имя>: отладка действий масштабирования.
+
+
+
 1. Objectives 
 HPA with Imperative commands 
 Requirements for HPA to work 
@@ -8,6 +32,9 @@ HPA с императивными командами
 Требования к HPA для работы 
 Что произойдет, 
 если параметр resources.limit не указан
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+
 
 
 
@@ -26,6 +53,10 @@ kubectl apply -f /root/deployment.yml
 
 To view the deployment and pods creation, use the below commands.
 kubectl get deploy or kubectl get pods
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+
+
 
 
 
@@ -43,6 +74,10 @@ C. Current replicas= 7
 
 D. Current replicas= 0    <-----------------------------
     Desired replicas= 0   <-----------------------------
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+
+
 
 
 
@@ -58,6 +93,10 @@ kubectl apply -f /root/autoscale.yml
 
 controlplane ~ ➜  kubectl autoscale deployment nginx-deployment --max=3 --cpu=80%
 horizontalpodautoscaler.autoscaling/nginx-deployment autoscaled
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+
+
 
 
 
@@ -69,6 +108,9 @@ horizontalpodautoscaler.autoscaling/nginx-deployment autoscaled
 
 Hint:
 The primary purpose of the HPA is to automatically adjust the number of pod replicas in a deployment, replication controller, or replica set based on observed metrics such as CPU utilization or custom metrics provided by the metrics server.
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+
 
 
 
@@ -79,6 +121,10 @@ Answer = metrics-server
 
 Hint:
 The metrics-server is a cluster-wide aggregator of resource usage data, and it provides the metrics required by the HPA to make scaling decisions.
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+
+
 
 
 
@@ -86,11 +132,14 @@ The metrics-server is a cluster-wide aggregator of resource usage data, and it p
 controlplane ~ ➜  kubectl get deployments.apps 
 NAME               READY   UP-TO-DATE   AVAILABLE   AGE
 nginx-deployment   3/3     3            3           17m
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+
+
 
 
 
 8. What is the status of HPA target?
-
 
 Hint:
 Run the below command to find HPA target
@@ -104,6 +153,8 @@ NAME               REFERENCE                     TARGETS              MINPODS   
 nginx-deployment   Deployment/nginx-deployment   cpu: <unknown>/80%   1         3         3          10m
 
 Answer = <unknown>/80%
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 
 
 
@@ -122,10 +173,20 @@ Run kubectl describe hpa nginx-deployment to find more details.
 
 Metrics:                                               ( current / target )
   resource cpu on pods  (as a percentage of request):  <unknown> / 80%
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 
 
 
-10. Since the HPA was failing due to the resource field missing in the nginx-deployment, the resource field has been updated in /root/deployment.yml. Update the nginx-deployment using this manifest. Watch the changes made to the nginx-deployment by the HPA after upgrading by using the kubectl get hpa --watch command.
+
+10. Since the HPA was failing due to the resource field missing in the nginx-deployment, 
+the resource field has been updated in /root/deployment.yml. Update the nginx-deployment using this manifest. 
+Watch the changes made to the nginx-deployment by the HPA after upgrading by using the 
+kubectl get hpa --watch command.
+
+Поскольку HPA не срабатывал из-за отсутствия поля resource в файле nginx-deployment, это поле было обновлено 
+в файле /root/deployment.yml. Обновите nginx-deployment, используя этот манифест. Отслеживайте изменения, 
+внесенные HPA в nginx-deployment после обновления, с помощью команды kubectl get hpa --watch.
 
 Hint:
 To update the nginx-deployment, run the below command:
@@ -133,19 +194,69 @@ To update the nginx-deployment, run the below command:
 kubectl apply -f /root/deployment.yml
 To watch the changes made to the nginx-deployment by the HPA, use the below command:
 
-kubectl get hpa --watch
+controlplane ~ ➜  kubectl apply -f /root/deployment.yml
+deployment.apps/nginx-deployment configured
 
-controlplane ~ ✖ kubectl get hpa --watch
-NAME               REFERENCE                     TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
-nginx-deployment   Deployment/nginx-deployment   cpu: 0%/80%   1         3         1          21m
+controlplane ~ ➜  kubectl get hpa --watch
+NAME               REFERENCE                     TARGETS              MINPODS   MAXPODS   REPLICAS   AGE
+nginx-deployment   Deployment/nginx-deployment   cpu: <unknown>/80%   1         3         7          7m1s
+nginx-deployment   Deployment/nginx-deployment   cpu: <unknown>/80%   1         3         3          7m16s
+nginx-deployment   Deployment/nginx-deployment   cpu: <unknown>/80%   1         3         3          7m31s
+nginx-deployment   Deployment/nginx-deployment   cpu: 0%/80%          1         3         3          7m46s
+nginx-deployment   Deployment/nginx-deployment   cpu: 0%/80%          1         3         1          8m1s
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+
+
 
 
 
 11. What does the event ScalingReplicaSet in the nginx-deployment HPA indicate?
 
-What is the cause of the FailedGetResourceMetric event in the nginx-deployment HPA?
+- The node has reached its process limit.
+- The HPA is scaling the number of pods up or down. <---------------------
+- The HPA is restarting all pods.
 
-The node has reached its process limit.
+controlplane ~ ➜  kubectl events hpa nginx-deployment | grep -i "ScalingReplicaSet"
+18m                     Normal  ScalingReplicaSet   Deployment/nginx-deployment   Scaled up replica set nginx-deployment-bf744486c from 0 to 7
+13m                     Normal  ScalingReplicaSet   Deployment/nginx-deployment   Scaled down replica set nginx-deployment-bf744486c from 7 to 3
+6m31s                   Normal  ScalingReplicaSet   Deployment/nginx-deployment   Scaled up replica set nginx-deployment-6c78464d7c from 0 to 2
+6m31s                   Normal  ScalingReplicaSet   Deployment/nginx-deployment   Scaled down replica set nginx-deployment-bf744486c from 7 to 6
+6m31s                   Normal  ScalingReplicaSet   Deployment/nginx-deployment   Scaled up replica set nginx-deployment-bf744486c from 3 to 7
+6m27s                   Normal  ScalingReplicaSet   Deployment/nginx-deployment   Scaled down replica set nginx-deployment-bf744486c from 5 to 4
+6m27s                   Normal  ScalingReplicaSet   Deployment/nginx-deployment   Scaled up replica set nginx-deployment-6c78464d7c from 3 to 4
+6m27s                   Normal  ScalingReplicaSet   Deployment/nginx-deployment   Scaled down replica set nginx-deployment-bf744486c from 6 to 5
+6m26s (x2 over 6m31s)   Normal  ScalingReplicaSet   Deployment/nginx-deployment   Scaled up replica set nginx-deployment-6c78464d7c from 2 to 3
+5m41s (x6 over 6m27s)   Normal  ScalingReplicaSet   Deployment/nginx-deployment   (combined from similar events): Scaled down replica set nginx-deployment-6c78464d7c from 3 to 1
+
+Solution:
+To find out what the event ScalingReplicaSet means in the HPA, run the command below:
+kubectl events hpa nginx-deployment | grep -i "ScalingReplicaSet"
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 
 
 
+12. What is the cause of the FailedGetResourceMetric event in the nginx-deployment HPA?
+- Memory on the node is insufficient.
+- CPU or memory requests are missing for a container. <---------------------
+- The HPA is unable to scale.
+- The node has reached its process limit.
+
+controlplane ~ ➜  kubectl events hpa nginx-deployment | grep -i "FailedGetResourceMetric"
+18m                  Warning   FailedGetResourceMetric  HPA/nginx-deployment   failed to get cpu utilization: missing request for cpu in container nginx of Pod nginx-deployment-bf744486c-ld7dm
+15m (x3 over 17m)    Warning   FailedGetResourceMetric  HPA/nginx-deployment   failed to get cpu utilization: missing request for cpu in container nginx of Pod nginx-deployment-bf744486c-8qz47
+13m (x13 over 18m)   Warning   FailedGetResourceMetric  HPA/nginx-deployment   failed to get cpu utilization: missing request for cpu in container nginx of Pod nginx-deployment-bf744486c-2gkn4
+
+Solution:
+To find out what the event FailedGetResourceMetric means in the HPA, run the command below:
+kubectl events hpa nginx-deployment | grep -i "FailedGetResourceMetric"
+The FailedGetResourceMetric event occurs because the HPA cannot calculate CPU utilization when pods are missing CPU requests. 
+Even if the Deployment YAML currently defines CPU requests, pod created earlier without those requests can still trigger 
+this warning until they are recreated.
+
+Чтобы узнать, что означает событие FailedGetResourceMetric в HPA, выполните следующую команду:
+kubectl events hpa nginx-deployment | grep -i "FailedGetResourceMetric"
+Событие FailedGetResourceMetric возникает, потому что HPA не может рассчитать загрузку ЦП, когда у подов отсутствуют запросы на использование ЦП. 
+Даже если в YAML-файле развертывания в данный момент определены запросы на использование ЦП, под, созданный ранее без этих запросов, 
+все равно может вызвать это предупреждение, пока он не будет создан заново.
