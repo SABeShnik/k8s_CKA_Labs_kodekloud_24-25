@@ -1,0 +1,90 @@
+1. Manual Scaling of a Kubernetes Deployment
+Objectives
+Understand the concept of scaling in Kubernetes
+Manually scale a deployment up and down
+Observe the effects of scaling on the application and resources
+
+
+
+2. Create a Deployment
+Using the /root/deployment.yml manifest file provided , create a Kubernetes deployment for the Flask application.
+Discovery
+Use kubectl get deployments to observe the deployment status.
+Use kubectl get pods to see the running pods.
+
+controlplane ~ ➜  kubectl apply -f /root/deployment.yml
+
+controlplane ~ ✖ kubectl get deployments
+NAME            READY   UP-TO-DATE   AVAILABLE   AGE
+flask-web-app   2/2     2            2           2m22s
+
+controlplane ~ ➜  kubectl get pods
+NAME                             READY   STATUS    RESTARTS   AGE
+flask-web-app-7dd4fbdc75-56fdm   1/1     Running   0          2m32s
+flask-web-app-7dd4fbdc75-l9pjc   1/1     Running   0          2m32s
+
+
+
+3. What is the primary purpose of the kubectl scale command?
+- To delete a Kubernetes object
+- To adjust the number of replicas in a deployment or replicaset <-------------------
+- To update the image of a running container
+- To create a new namespace
+
+Hint:
+The kubectl scale command is used to change the number of running replicas of a deployment, replicaset, or other scalable resources. This is useful for adjusting capacity or managing workloads in a Kubernetes cluster.
+
+
+
+4. Can the kubectl scale command be used to scale down a statefulset in Kubernetes?
+
+- No, it only works with deployments and replicasets.
+- Yes, it can scale both deployments and statefulsets. <---------------------
+- Yes, but only if the --scale-down flag is used.
+- No, statefulsets cannot be scaled down.
+
+The kubectl scale command can be used to scale both deployments and statefulsets. When scaling a statefulset, Kubernetes ensures that the state and order of the pods are maintained, unlike in deployments where pods can be created and destroyed in any order.
+
+Команда kubectl scale может использоваться для масштабирования как развертываний, так и StatefulSet. При масштабировании StatefulSet Kubernetes гарантирует сохранение состояния и порядка подов, в отличие от развертываний, где поды могут создаваться и уничтожаться в любом порядке.
+
+StatefulSet — это ресурс Kubernetes, предназначенный для управления приложениями, которые требуют сохранения состояния между перезапусками. Примеры таких приложений: 
+базы данных (MySQL, PostgreSQL, MongoDB и другие СУБД);
+очереди сообщений (Kafka, RabbitMQ);
+кластерные системы (Elasticsearch, Cassandra, Zookeeper);
+системы с репликацией данных (Etcd, Consul).
+В отличие от Deployment, который подходит для stateless-сервисов, StatefulSet обеспечивает строгую гарантию порядка, уникальность и стабильность идентификаторов подов.
+
+
+
+
+5. Manual Scale
+Manually scale the deployment named flask-web-app to have 3 replicas.
+Observation
+Observe the changes with kubectl get deployments and kubectl get pods.
+To view the application, click on the Ingress button at the top of the terminal, or click on Skooner to access the monitoring tool and view the resources in the Kubernetes cluster.
+Token for the Skooner can be found in /root/skooner-sa-token.txt
+
+controlplane ~ ➜  kubectl get deployments.apps 
+NAME            READY   UP-TO-DATE   AVAILABLE   AGE
+flask-web-app   2/2     2            2           12m
+
+controlplane ~ ➜  kubectl scale deployment flask-web-app --replicas 3 (or --replicas=3)
+deployment.apps/flask-web-app scaled
+
+controlplane ~ ➜  kubectl get deployments.apps 
+NAME            READY   UP-TO-DATE   AVAILABLE   AGE
+flask-web-app   3/3     3            3           13m
+
+
+
+
+6. If you scale a deployment using kubectl scale to a higher number of replicas, but the cluster has insufficient resources to accommodate all new replicas, what will happen?
+
+- Kubernetes will scale the deployment down automatically to fit the available resources.
+- Some replicas will be created up to the limit of available resources, and the deployment will remain in a pending state for the remaining replicas. <----------------------
+- The command will succeed, but Kubernetes will automatically remove resources from other workloads.
+- The command will fail, and no replicas will be created.
+
+
+Hint:
+When you scale a deployment to a higher number of replicas than the cluster can support due to resource constraints, Kubernetes will create as many replicas as possible within the available resources. The remaining replicas will be in a pending state until sufficient resources are freed up or added to the cluster. This behavior allows Kubernetes to manage resources dynamically while maintaining the desired state as closely as possible.
