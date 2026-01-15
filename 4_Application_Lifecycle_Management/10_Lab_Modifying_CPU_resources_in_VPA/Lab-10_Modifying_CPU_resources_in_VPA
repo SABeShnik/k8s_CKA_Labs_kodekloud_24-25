@@ -1,0 +1,162 @@
+1. In this lab, you will deploy a sample application on Kubernetes, monitor its CPU resource usage, and utilize a Vertical Pod Autoscaler (VPA) to manage and adjust the resource allocation for the pods. The goal is to observe how the VPA automatically recommends and adjusts memory resource limits, particularly when the application experiences increased load.
+Tasks:
+-Deploy a sample application and verify that the pods are running correctly.
+-Monitor pod resource usage using the ---kubectl top--- command to assess CPU and memory consumption.
+-Deploy a Vertical Pod Autoscaler (VPA) to observe how it adjusts CPU and memory resource recommendations based on the application’s current usage.
+-Introduce load to the application and monitor how VPA dynamically updates its recommendations in response to increased demand.
+-Interpret VPA recommendations by understanding key parameters like lowerBound, upperBound, and uncappedTarget for resource management.
+By the end of this lab, you will have a clear understanding of how VPA optimizes CPU resource usage in a Kubernetes environment, improving application performance and efficiency under varying workloads.
+------------------------------
+
+В этой лабораторной работе вы развернете тестовое приложение в Kubernetes, будете отслеживать использование ресурсов ЦП и использовать Vertical Pod Autoscaler (VPA) для управления и корректировки распределения ресурсов для подов. Цель — наблюдать, как VPA автоматически рекомендует и корректирует ограничения на использование памяти, особенно при повышенной нагрузке на приложение.
+Задачи:
+-Развернуть тестовое приложение и убедиться в корректной работе подов.
+-Отслеживать использование ресурсов подов с помощью команды ----kubectl top---- для оценки потребления ЦП и памяти.
+-Развернуть Vertical Pod Autoscaler (VPA), чтобы наблюдать, как он корректирует рекомендации по ресурсам ЦП и памяти в зависимости от текущего использования приложения.
+-Ввести нагрузку на приложение и отслеживать, как VPA динамически обновляет свои рекомендации в ответ на возросший спрос.
+-Интерпретировать рекомендации VPA, понимая ключевые параметры, такие как lowerBound, upperBound и uncappedTarget, для управления ресурсами.
+
+По завершении этой лабораторной работы вы получите четкое понимание того, как VPA оптимизирует использование ресурсов ЦП в среде Kubernetes, повышая производительность и эффективность приложений при различных нагрузках.
+
+
+2. A file named vpa-cpu-testing.yml has been prepared and is located in the /root directory. Proceed to deploy this file.
+
+controlplane ~ ➜  kubectl apply -f /root/vpa-cpu-testing.yml
+deployment.apps/flask-app-4 created
+service/flask-app-4-service created
+
+Solution:
+To deploy the file, run the following command:
+kubectl apply -f /root/vpa-cpu-testing.yml
+This will apply the configuration from the vpa-cpu-testing.yaml file located in the /root directory.
+
+
+
+3. Monitoring Pod Resource Usage
+To check the current resource usage (CPU and memory) of all running pods in your Kubernetes cluster, use the ---kubectl top--- pod command. This command retrieves and displays resource metrics directly from the cluster's resource metrics API. It is particularly useful for tracking how efficiently your workloads are consuming cluster resources.
+
+To view the resource consumption of the pods, run the following command:
+
+kubectl top pod
+
+The output will display a table with each pod's name, namespace, CPU usage (in millicores), and memory usage (in mebibytes), allowing you to monitor resource usage in real time.
+
+For example, the output may look like this:
+
+NAME                           CPU(cores)   MEMORY(bytes)   
+flask-app-4-5cfb5d78c4-p9l2m   1m           19Mi            
+flask-app-4-5cfb5d78c4-t229n   1m           19Mi            
+
+This output provides an overview of how much CPU and memory each pod is currently consuming.
+
+Note: The metrics server may take some time to collect metrics from newly deployed pods.
+
+
+
+
+4. A file named vpa-cpu.yml has been created in the /root directory. Proceed to deploy this file.
+Once deployed, check the cpu consumption by running the below command:
+kubectl get vpa
+
+controlplane ~ ➜  kubectl apply -f /root/vpa-cpu.yml
+verticalpodautoscaler.autoscaling.k8s.io/flask-app created
+
+controlplane ~ ➜  kubectl get vpa
+NAME        MODE   CPU   MEM   PROVIDED   AGE
+flask-app   Off                           10s  <------------------------ CPU = EMPTY 
+
+Sol:
+To deploy this file, run the following command:
+kubectl apply -f /root/vpa-cpu.yml
+This will apply the configuration from the vpa-cpu.yml file for deployment.
+
+
+
+5. Initiate the load on the flask-app-4 deployment by executing the script located at /root/load.sh.
+Note:
+-The /root/load.sh script initiates continuous background load on the flask-app-4 deployment.
+-Please do not terminate or interrupt the load process, as Task 6 depends on the VPA having enough usage data to generate a target CPU recommendation.
+
+controlplane ~ ➜  /root/load.sh
+Load initiated in the background. Please do not terminate this process.
+
+Sol:
+To introduce load on the flask-app-4 deployment, please execute the following command:
+/root/load.sh &
+
+6. Capture the recommended target CPU value from the flask-app VPA and store it in /root/target.
+Note:
+If you do not see a command prompt after running the load script, it means the terminal is still busy running the script in the foreground.
+In that case, please open a new terminal tab to complete this task without interrupting the load.
+
+kubectl get vpa flask-app -o yaml
+  recommendation:
+    containerRecommendations:
+    - containerName: flask-app-4
+      lowerBound:
+        cpu: 100m
+      target:
+        cpu: 379m <------------------------------------
+      uncappedTarget:
+        cpu: 379m
+      upperBound:
+        cpu: "1"
+
+controlplane ~ ✖ echo "864m" > /root/target
+
+controlplane ~ ➜  cat /root/target
+379m
+
+controlplane ~ ➜  kubectl get vpa
+NAME        MODE   CPU    MEM   PROVIDED   AGE
+flask-app   Off    864m         True       5m54s <------------------------ CPU = 864m 
+
+
+
+Solution:
+---Use the kubectl get command to identify the recommended target CPU value:
+   kubectl get vpa flask-app -o yaml
+Look for the Recommendation section under the Status field.
+Identify the target.cpu value for the relevant container (e.g., flask-app-4).
+---Manually note the target CPU value and store it in /root/target.
+Example Output
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  annotations:
+  name: flask-app
+  namespace: default
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      controlledResources:
+      - cpu
+      maxAllowed:
+        cpu: 1000m
+      minAllowed:
+        cpu: 100m
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: flask-app-4
+  updatePolicy:
+    updateMode: "Off"
+status:
+  conditions:
+  - lastTransitionTime: "2024-11-07T06:18:17Z"
+    status: "True"
+    type: RecommendationProvided
+  recommendation:
+    containerRecommendations:
+    - containerName: flask-app-4
+      lowerBound:
+        cpu: 100m
+      target:
+        cpu: 143m
+      uncappedTarget:
+        cpu: 143m
+      upperBound:
+        cpu: "1"
+Store the target CPU value in /root/target:
+echo "143m" > /root/target
