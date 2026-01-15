@@ -1,0 +1,95 @@
+82% **********************************************************************
+******* 4_Troubleshoot_Network *******************************************
+**************************************************************************
+-----------------------------------------------------------------------------
+
+
+1. **Troubleshooting Test 1:** (--- No network plugin weave ---)
+A simple 2 tier application is deployed in the "triton" namespace. It must display a green web page on success. 
+Click on the app tab at the top of your terminal to view your application. It is currently failed. Troubleshoot and fix the issue. 
+Stick to the given architecture. Use the same names and port numbers as given in the below architecture diagram. 
+Feel free to edit, delete or recreate objects as necessary.
+
+DB Service working?
+WebApp Service working?
+
+
+Solution:
+Check the pods in the triton namespace. They are stuck in Pending:
+root@controlplane ~ ➜  kubectl get pods -n triton
+NAME                            READY   STATUS    RESTARTS   AGE
+mysql                           0/1     Pending   0          10s
+webapp-mysql-7bd5857746-68d8v   0/1     Pending   0          9s
+--------------------------
+
+Describe one of the pods to see why it cannot be scheduled:
+root@controlplane ~ ➜  kubectl describe pod mysql -n triton
+...
+#Events:
+  Type     Reason             Age   From               Message
+  ----     ------             ----  ----               -------
+  Warning  FailedScheduling   ...   default-scheduler  0/1 nodes are available: 1 node(s) had untolerated taint {node.kubernetes.io/not-ready: }.
+--------------------------
+
+The scheduler reports the node has a not-ready taint. Check the node status:
+root@controlplane ~ ➜  kubectl get nodes
+NAME           STATUS     ROLES           AGE     VERSION
+controlplane   NotReady   control-plane   2m40s   v1.33.0
+--------------------------
+
+Check cluster system pods. CoreDNS is stuck in ContainerCreating, indicating networking is not ready:
+root@controlplane ~ ➜  kubectl get pods -A
+NAMESPACE     NAME                                   READY   STATUS              RESTARTS   AGE
+kube-system   coredns-674b8bbfcf-blkpp               0/1     ContainerCreating   0          93s
+kube-system   coredns-674b8bbfcf-zkmk6               0/1     ContainerCreating   0          93s
+...
+triton        mysql                                  0/1     Pending             0          10s
+triton        webapp-mysql-7bd5857746-68d8v          0/1     Pending             0          9s
+--------------------------
+
+Verify if a CNI plugin is installed (flannel/calico/weave/cilium). No pods are found: - А ПОДЫ ЕСТЬ ОТ WEAVE
+  kubectl get pods -A | grep -E "flannel|calico|weave|cilium"
+kube-system   weave-net-pm9z5                        2/2     Running   1 (37m ago)   37m
+--------------------------
+
+Check the CNI configuration directory. It contains only the "keep" file (no CNI config present):
+root@controlplane ~ ➜  ls -la /etc/cni/net.d/
+total 8
+drwx------ 2 root root 4096 Jan  6 05:25 .
+drwxr-xr-x 3 root root 4096 Sep 24 07:59 ..
+-rw-r--r-- 1 root root    0 Dec 11  2024 .kubernetes-cni-keep
+Check kubelet logs to confirm the CNI initialization issue:
+root@controlplane ~ ➜  journalctl -u kubelet | grep -i cni | tail -10
+...NetworkPluginNotReady ... cni plugin not initialized
+Root Cause = The cluster networking (CNI) is missing / not initialized, so the node stays NotReady, and pods cannot be scheduled.
+--------------------------
+
+Install Flannel CNI: - сработал
+  kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+  root@controlplane ~ ➜  kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+namespace/kube-flannel created
+serviceaccount/flannel created
+clusterrole.rbac.authorization.k8s.io/flannel created
+clusterrolebinding.rbac.authorization.k8s.io/flannel created
+configmap/kube-flannel-cfg created
+daemonset.apps/kube-flannel-ds created
+
+Wait for the node to become Ready, then verify application pods are running:
+root@controlplane ~ ➜  kubectl get nodes
+NAME           STATUS   ROLES           AGE     VERSION
+controlplane   Ready    control-plane   ...     v1.33.0
+
+root@controlplane ~ ➜  kubectl get pods -n triton
+NAME                            READY   STATUS    RESTARTS   AGE
+mysql                           1/1     Running   0          ...
+webapp-mysql-7bd5857746-68d8v   1/1     Running   0          ...
+Access the application from the app tab (NodePort 30081). The page should now load successfully and display the green web page.
+----------------------------------------------------------------------------------------------------------------
+
+
+---WEAVE---
+kubectl apply -f https://reweave.azurewebsites.net/k8s/v1.29/net.yaml - сработал
+---CALICO---
+kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/tigera-operator.yaml
+---FLANNEL---
+kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml

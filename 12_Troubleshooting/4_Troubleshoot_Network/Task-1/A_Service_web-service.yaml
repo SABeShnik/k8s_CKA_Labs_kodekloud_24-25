@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+  namespace: triton
+spec:
+  clusterIP: 10.111.0.182
+  clusterIPs:
+  - 10.111.0.182
+  externalTrafficPolicy: Cluster
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - nodePort: 30081
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    name: webapp-mysql
+  sessionAffinity: None
+  type: NodePort
+status:
+  loadBalancer: {}
